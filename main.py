@@ -534,4 +534,12 @@ async def xserver(ctx, id:str):
     except:embed.set_footer(text= f"By: {str(ctx.author)}")
     await ctx.respond(embed= embed, ephemeral=True)
 
+@bot.slash_command(name="source", description="スキッドしまくったこのBOTのゴミコード貼ってます。")
+async def _source_code(ctx):
+    e = discord.Embed(description="PythonなのにClass使ってません:sob:",color=fav)
+    b = Button(label="Jump to Github", url="https://github.com/Ennuilw/-/tree/main")
+    view=View()
+    view.add_item(b)
+    await ctx.respond(embed=e, view=view)
+
 bot.run(s.token)
