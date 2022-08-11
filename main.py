@@ -1,27 +1,48 @@
 import setting as s
-import discord,dateutil.parser,random,asyncio,time,schedule
+import discord,dateutil.parser,random,asyncio,time,schedule,subprocess,datetime,sys
 from discord import Activity,ActivityType, AutoShardedBot, Sticker
 from discord.ext import commands
 from discord.ui import View, Button
 
 from PIL import Image, ImageDraw, ImageFont
-import cv2
 from sklearn.cluster import KMeans
 import numpy as np
 from numpy import linalg as LA
-import random
-import discord
-import requests
-import io
+import random,requests,io,cv2
 
 intents=discord.Intents.all()
-bot=commands.Bot(command_prefix=".", intents=intents)
+bot=commands.Bot(command_prefix="k.", intents=intents)
 bot.remove_command("help")
 fav= 0x6dc1c1
+
 
 @bot.event
 async def on_ready():
   await bot.change_presence(activity=discord.Streaming(platform="YouTube",name="Yufu", url="https://www.youtube.com/watch?v=pP_rrVc0KKY&list=PL2L2WRV1GvihAXGZGi0mmj_s45fUzg_QF&index=1"))
+
+
+@bot.slash_command(name="stop", description="開発者限定緊急停止")
+@commands.dm_only()
+async def SCRIPT_STOP(ctx):
+    if ctx.author.id != s.Dev:
+        await ctx.respond("帰れ")
+        return
+    user = bot.get_user(959142919573491722)
+    e = discord.Embed(
+        title="強制終了報告",
+        description=f"{datetime.datetime.now()}")
+    await user.send(embed=e)    
+    sys.exit()
+
+
+@bot.command()
+async def inserver(ctx):
+    with open("server.txt", "w", encoding='utf-8') as f:
+        activeservers = bot.guilds
+        for guild in activeservers:
+             f.write(f"[ {str(guild.id)} ] {guild.name}\n")
+    await ctx.send(file=discord.File("server.txt", filename="ServerList.txt"))
+#"C:\Users\Ennui\BOT\server.txt"
 
 @bot.command()
 async def pic(ctx):
@@ -82,14 +103,43 @@ def extract_main_color(img_path, color_num):
     #print("extracted colors array:")
     #print(cluster_centers_arr)
     return cluster_centers_arr
-
 img_path = 'image.png'
 
 
-@bot.slash_command(name="stop")
-async def stop(ctx):
-    if ctx.author.id == s.Dev:await ctx.bot.close()
-    else:await ctx.respond("帰れ", ephemeral=True)
+@bot.slash_command(name="夕弦", )
+async def _ON_BOT(ctx):
+    if ctx.author.id != s.Dev:
+        await ctx.respond("帰れ", ephemeral=True)
+        return
+    subprocess.run("cd C:\\Users\\Ennui\\BOT", shell = True)
+    subprocess.run("python spam.py", shell=True)
+    await ctx.send("<@968603083414331423>")
+
+@bot.slash_command(name="タイプ別憤死")
+async def type_funshi(ctx):
+    text_funshi = """
+**典型的憤死パターン**
+
+_1.発狂型憤死_
+明らかに劣勢な状態になってから露骨に発作を起こしキチガイムーヴを始めるタイプ。
+ネタに走って有耶無耶にしようという意図が見え見えである。
+
+_2.生存本能型憤死_
+生存本能タイムアウト/ブロック/ミュート/BANを行うタイプ。
+憤死回避のために実力行使を行ってしまったが故の行動である。
+
+_3.糖質化型憤死_
+明らかな決めつけや思い込みをし始め勝手に憤慨し続けるタイプ。
+***の圧倒的煽りによって極度のストレスを受けた故の行動である。
+
+_4.ノーダメアピール型憤死_
+ノーダメアピールを繰り返し精神的勝利を訴え続けるタイプ。
+トマトフェイスを隠しきれていないため周りから見ると滑稽である。
+
+_5.スルー型憤死_
+突然話題を変えることで露骨にスルーアピールをするタイプ。
+指摘されるとすぐ必死になって否定をしてくることが多い。"""
+    await ctx.respond(text_funshi)
 
 @bot.slash_command(name="憤死ワード")
 async def word_list(ctx):
@@ -108,12 +158,12 @@ async def word_list(ctx):
 ・あーもうこいつうるさいから蹴ろう
 ・誤字してて草
 ・十字軍はくだらない組織
-・あそんでいるだけなんだが？""") 
+・あそんでいるだけなんだが？""", view=view) 
 
-@bot.command()
+@bot.slash_command()
 async def boosters(ctx):
     g = ctx.guild.premium_subscribers
-    for i in g:await ctx.send(f"{i}")
+    for i in g:await ctx.respond(f"{i}")
 
 @bot.command()
 async def gensin(ctx):
@@ -195,7 +245,7 @@ async def about(ctx):
     view.add_item(b2)
     await ctx.respond(embed=embed, view=view)
 
-@bot.slash_command(name="avatar", description="Get the User Icon")
+@bot.slash_command(name="avatar", description="サーバープロフィールのアイコンを取得")
 async def avatar(ctx, user:discord.Member=None):
     if not user: user= ctx.author
     avatar= user.display_avatar
@@ -219,70 +269,69 @@ async def banner(ctx, user:discord.Member=None):
         await ctx.respond(embed=e)
     except:await ctx.respond("Bannerが検出できない")
 
-@bot.slash_command(name="track", description="")
+@bot.slash_command(name="track", description="現在アクティビティにあるSpotifyの楽曲のURLを送信")
 async def track(ctx, user:discord.Member=None):
     if not user: user=ctx.author
     spotify_result = next((activity for activity in user.activities if isinstance(activity, discord.Spotify)), None)
     if spotify_result is None:await ctx.respond(f"{user.name} is not listening to Spotify!")
     if spotify_result:await ctx.respond(f"https://open.spotify.com/track/{spotify_result.track_id}")
 
-@bot.slash_command(name="spotify", description="アクティビティからSpotifyの情報を送信")
+@bot.slash_command(name="spotify", description="アクティビティからSpotifyの楽曲情報を送信")
 async def spotify(ctx, user:discord.Member=None):
     if not user:user=ctx.author
-    spotify_result= next((activity for activity in user.activities if isinstance(activity, discord.Spotify)), None)
-    if spotify_result is None:await ctx.respond(f"{user.name} is not listening to Spotify!")
-    if spotify_result:
-        embed=discord.Embed(color=spotify_result.color)
-        embed.set_thumbnail(url=spotify_result.album_cover_url)
-        embed.add_field(name="Song Title", value=f"```{spotify_result.title}```")
-        artists = spotify_result.artists
-        if not artists[0]: re_result=spotify_result.artist
+    _spotify_result= next((activity for activity in user.activities if isinstance(activity, discord.Spotify)), None)
+    if _spotify_result is None:await ctx.respond(f"{user.name} is not listening to Spotify!")
+    if _spotify_result:
+        embed=discord.Embed(color=_spotify_result.color)
+        embed.set_thumbnail(url=_spotify_result.album_cover_url)
+        embed.add_field(name="Song Title", value=f"```{_spotify_result.title}```")
+        artists = _spotify_result.artists
+        if not artists[0]: re_result=_spotify_result.artist
         else: re_result = ', '.join(artists)
         embed.add_field(name="Artist[s]", value=f"```{re_result}```")
-        embed.add_field(name="Album", value=f"```{spotify_result.album}```", inline=False)
-        embed.add_field(name="Time", value=f"```{dateutil.parser.parse(str(spotify_result.duration)).strftime('%M:%S')}```")
-        embed.add_field(name="URL", value=f"```https://open.spotify.com/track/{spotify_result.track_id}```", inline=False)
+        embed.add_field(name="Album", value=f"```{_spotify_result.album}```", inline=False)
+        embed.add_field(name="Time", value=f"```{dateutil.parser.parse(str(_spotify_result.duration)).strftime('%M:%S')}```")
+        embed.add_field(name="URL", value=f"```https://open.spotify.com/track/{_spotify_result.track_id}```", inline=False)
         embed.set_footer(text=f"By: {str(ctx.author)}")
         view = View()
-        b = Button(label="URL", url=f"https://open.spotify.com/track/{spotify_result.track_id}")
+        b = Button(label="URL", url=f"https://open.spotify.com/track/{_spotify_result.track_id}")
         jacket = Button(label="see jacket", style=discord.ButtonStyle.green)
         async def Button_callback(interaction:discord.Interaction):
-            await interaction.response.send_message(spotify_result.album_cover_url, ephemeral=True)
+            await interaction.response.send_message(_spotify_result.album_cover_url, ephemeral=True)
         jacket.callback = Button_callback
         view.add_item(b)
         view.add_item(jacket)
         await ctx.respond(embed=embed, view=view)
 
 @bot.command(aliases=["s"])
-async def spotify(ctx, user:discord.Member=None):
+async def spotify_(ctx, user:discord.Member=None):
     if not user:user=ctx.author
-    spotify_result= next((activity for activity in user.activities if isinstance(activity, discord.Spotify)), None)
-    if spotify_result is None:await ctx.respond(f"{user.name} is not listening to Spotify!")
-    if spotify_result:
-        embed=discord.Embed(color=spotify_result.color)
-        embed.set_thumbnail(url=spotify_result.album_cover_url)
-        embed.add_field(name="Song Title", value=f"```{spotify_result.title}```")
-        artists = spotify_result.artists
-        if not artists[0]: re_result=spotify_result.artist
+    _spotify_result= next((activity for activity in user.activities if isinstance(activity, discord.Spotify)), None)
+    if _spotify_result is None:await ctx.respond(f"{user.name} is not listening to Spotify!")
+    if _spotify_result:
+        embed=discord.Embed(color=_spotify_result.color)
+        embed.set_thumbnail(url=_spotify_result.album_cover_url)
+        embed.add_field(name="Song Title", value=f"```{_spotify_result.title}```")
+        artists = _spotify_result.artists
+        if not artists[0]: re_result=_spotify_result.artist
         else: re_result = ', '.join(artists)
         embed.add_field(name="Artist[s]", value=f"```{re_result}```")
-        embed.add_field(name="Album", value=f"```{spotify_result.album}```", inline=False)
-        embed.add_field(name="Time", value=f"```{dateutil.parser.parse(str(spotify_result.duration)).strftime('%M:%S')}```")
-        embed.add_field(name="URL", value=f"```https://open.spotify.com/track/{spotify_result.track_id}```", inline=False)
+        embed.add_field(name="Album", value=f"```{_spotify_result.album}```", inline=False)
+        embed.add_field(name="Time", value=f"```{dateutil.parser.parse(str(_spotify_result.duration)).strftime('%M:%S')}```")
+        embed.add_field(name="URL", value=f"```https://open.spotify.com/track/{_spotify_result.track_id}```", inline=False)
         embed.set_footer(text=f"By: {str(ctx.author)}")
         view = View()
-        b = Button(label="URL", url=f"https://open.spotify.com/track/{spotify_result.track_id}")
+        b = Button(label="URL", url=f"https://open.spotify.com/track/{_spotify_result.track_id}")
         jacket = Button(label="see jacket", style=discord.ButtonStyle.green)
         async def Button_callback(interaction:discord.Interaction):
-            await interaction.response.send_message(spotify_result.album_cover_url, ephemeral=True)
+            await interaction.response.send_message(_spotify_result.album_cover_url, ephemeral=True)
         jacket.callback = Button_callback
         view.add_item(b)
         view.add_item(jacket)
-        await ctx.send(embed=embed, view=view)
+        await ctx.respond(embed=embed, view=view)
 
-
-@bot.slash_command(name="invite", description="Botの招待URLを送信")
-async def invite(ctx, id:discord.Member):
+@bot.slash_command(name="invite", description="Botをメンションして招待URLを生成")
+async def invite(ctx, mention:discord.Member):
     e=discord.Embed(description=f"{id.mention}(**{id.id}**)", color=fav)
     date_format="%Y/%m/%d %H:%M"
     e.add_field(name=f"アカウント作成日", value=f"**`{id.created_at.strftime(date_format)}`**")
@@ -299,7 +348,7 @@ async def invite(ctx, id:discord.Member):
     except:e.set_thumbnail(url="https://cdn.discordapp.com/embed/avatars/0.png")
     await ctx.respond(embed=e, view=view)
 
-@bot.command()
+@bot.slash_command(name="invitegen", description="BOTのIDから招待URLを作成")
 async def gen(ctx, id:str):
     b = Button(label="No perms", url= f"https://discord.com/oauth2/authorize?client_id={id}&permissions=0&scope=bot%20applications.commands")
     b_2 = Button(label="Admin", url= f"https://discord.com/oauth2/authorize?client_id={id}&permissions=8&scope=bot%20applications.commands")
@@ -325,44 +374,43 @@ async def account(ctx, user:discord.Member=None):
 @bot.slash_command(name="userinfo", description="ユーザー情報を送信")
 async def userinfo(ctx, user:discord.Member=None):
     if not user: user= ctx.author
-    async with ctx.channel.typing():
-        date_format="%Y/%m/%d"
-        s = str(user.status)
-        s_icon = ""
-        if s == "online":s_icon = "🟢"
-        elif s == "idle":s_icon = "🟠"
-        elif s == "dnd":s_icon = "🔴"
-        elif s == "offline":s_icon = "⚫"
-        embed= discord.Embed(title= f"{user}", description= f"**ID : `{user.id}`**", color= 0x6dc1d1)
-        embed.set_thumbnail(url=user.display_avatar)
-        embed.add_field(name= "Name", value= f"> `{user}`", inline= True)
-        embed.add_field(name= "Nickname", value= f"> `{user.display_name}`", inline= True)
-        embed.add_field(name="Status", value=f"> `{s_icon} {s}`", inline=True)
-        if len(user.roles) >= 1:
-            role_string = " ".join([r.mention for r in user.roles][1:])
-            embed.add_field(name= f"Roles `{len(user.roles)-1}`", value= f"> {role_string}", inline=False)
-        embed.add_field(name= "Createion Account", value= f"> `{user.created_at.strftime(date_format)}`", inline= True)
-        embed.add_field(name= "Joined Server", value= f"> `{user.joined_at.strftime(date_format)}`", inline= True)
-        user = await bot.fetch_user(user.id)
-        try:embed.set_image(url=user.banner.url)
-        except:pass
-        embed.set_footer(text= f"By: {str(ctx.author)}")
-        await ctx.respond(embed= embed)
+    date_format="%Y/%m/%d"
+    s = str(user.status)
+    s_icon = ""
+    if s == "online":s_icon = "🟢"
+    elif s == "idle":s_icon = "🟠"
+    elif s == "dnd":s_icon = "🔴"
+    elif s == "offline":s_icon = "⚫"
+    embed= discord.Embed(title= f"{user}", description= f"**ID : `{user.id}`**", color=fav)
+    embed.set_thumbnail(url=user.display_avatar)
+    embed.add_field(name= "Name", value= f"> {user}", inline= True)
+    embed.add_field(name= "Nickname", value= f"> {user.display_name}", inline= True)
+    embed.add_field(name="Status", value=f"> `{s_icon} {s}`", inline=True)
+    if len(user.roles) >= 1:
+        role_string = " ".join([r.mention for r in user.roles][1:])
+        embed.add_field(name= f"Roles `{len(user.roles)-1}`", value= f"> {role_string}", inline=False)
+    embed.add_field(name= "Createion Account", value= f"> `{user.created_at.strftime(date_format)}`", inline= True)
+    embed.add_field(name= "Joined Server", value= f"> `{user.joined_at.strftime(date_format)}`", inline= True)
+    user = await bot.fetch_user(user.id)
+    try:embed.set_image(url=user.banner.url)
+    except:pass
+    embed.set_footer(text= f"By: {str(ctx.author)}")
+    await ctx.respond(embed= embed)
 
-@bot.slash_command(name="vanity")
+
+@bot.slash_command(name="vanity", description="ｻｰﾊﾞｰのﾊﾞﾆﾃｨURLを表示")
 async def vanity(ctx):
     try:
         vanity = await ctx.guild.vanity_invite()
-        await ctx.respond(vanity)
+        await ctx.respond(str(vanity).replace('https://discord/', ''))
     except:await ctx.respond("ない")
 
 @bot.slash_command(name="leave")
+@commands.has_permissions(administrator=True)
 async def leave(ctx, guild_id=None):
-    if ctx.author.id == s.Dev:
-        if not guild_id:guild_id=ctx.guild.id
-        await bot.get_guild(int(guild_id)).leave()
-        await ctx.respond(f"I left: {guild_id}")
-    else:await ctx.respond("帰れ", )
+    if not guild_id:guild_id=ctx.guild.id
+    await bot.get_guild(int(guild_id)).leave()
+    await ctx.respond(f"I left: {guild_id.name}")
 
 @bot.slash_command(name="serverinfo", description="Get info about server")
 async def serverinfo(ctx):
@@ -371,32 +419,44 @@ async def serverinfo(ctx):
     tchannels= len(guild.text_channels)
     vchannels= len(guild.voice_channels)
     roles= [role for role in guild.roles]
-    emojis= [emoji for emoji in guild.emojis]
+    emojis= [1 for emoji in guild.emojis]
     online= [1 for user in guild.members if user.status != discord.Status.offline]
     stickers = [sticker  for sticker in guild.stickers]
-    embed= discord.Embed(title=f"{guild.name}", description= f":crown: **Owner : **{guild.owner.mention}\n:id: **Server id : `{guild.id}`**", color= 0x6dc1d1)
-    embed.set_thumbnail(url= guild.icon.url)
+    embed= discord.Embed(title=f"{guild.name}", description= f":crown: **Owner : **{guild.owner.mention}\n\
+        :id: **Server id : `{guild.id}`**\n\
+        :calendar_spiral: Createion : **`{guild.created_at.strftime(date_f)}`**", color= 0x6dc1d1)
+    try:embed.set_thumbnail(url= guild.icon.url)
+    except:pass
     embed.add_field(name= ":shield: Role", value= f"Roles: **{len(roles)}**", inline= True)
-    embed.add_field(name= ":grinning: Emoji", value= f"Emojis: **{len(emojis)}**\nStickers: **{len(stickers)}**")
     embed.add_field(name= f":gem: Boost [{guild.premium_subscription_count}]", value= f"Tier: ** {guild.premium_tier}**")
-    embed.add_field(name= ":calendar_spiral: Createion", value= f"**`{guild.created_at.strftime(date_f)}`**", inline=True)
+    try:
+        vanity =  await guild.vanity_invite()
+        embed.add_field(name=":link: Vanity URL", value=f"`{str(vanity).replace('https://discord', '')}`")
+    except:embed.add_field(name=":link: Vanity URL", value=f"`None`")        
+    embed.add_field(name= ":grinning: Emoji", value= f"Emojis: **{len(emojis)}**\nStickers: **{len(stickers)}**")
     embed.add_field(name= f":busts_in_silhouette: Members [{guild.member_count}]", 
             value= f"User: **{str(sum(1 for member in guild.members if not member.bot))}** |  Bot: **{str(sum(1 for member in guild.members if member.bot))}**\nOnline: **{len(online)}**")
     embed.add_field(name= f":speech_left: Channels [{tchannels+vchannels}]", 
-            value= f"Text: **{tchannels}** | Voice: **{vchannels}**\nCategory: **{len(guild.categories)}**",inline= True)
-    try:
-        vanity =  await guild.vanity_invite()
-        embed.add_field(name=":link: Vanity URL", value=f"`{str(vanity).replace('https://', '')}`")
-    except:embed.add_field(name=":link: Vanity URL", value=f"`None`")        
+            value= f"Text: **{tchannels}**\nVoice: **{vchannels}**\nCategory: **{len(guild.categories)}**",inline= True)
     try:
         req= await bot.http.request(discord.http.Route("GET", "/guilds/{sid}", sid= guild.id))
         banner_id= req["banner"]
         if banner_id:
-            banner_url= f"https://cdn.discordapp.com/banners/{guild.id}/{banner_id}.png?size=1024"
-            embed.set_image(url= banner_url)
-            embed.set_footer(text= f"By: {str(ctx.author)} | Banner is png file")
-    except:embed.set_footer(text= f"By: {str(ctx.author)}")
-    await ctx.respond(embed= embed)
+            banner_url_png= f"https://cdn.discordapp.com/banners/{guild.id}/{banner_id}.png?size=1024"
+            banner_url_gif= f"https://cdn.discordapp.com/banners/{guild.id}/{banner_id}.gif?size=1024"
+            embed.set_image(url= banner_url_png)
+            embed.set_footer(text= f"By: {str(ctx.author)} ・Banner is png file")
+            b= Button(label="See on Gif",style=discord.ButtonStyle.green)
+        async def button_callback(interaction):
+           await interaction.response.send_message(banner_url_gif, view=None, ephemeral=True)
+        b.callback= button_callback
+        view=View()
+        view.add_item(b)
+        await ctx.respond(embed=embed, view=view)
+    except:
+        embed.set_footer(text= f"By: {str(ctx.author)}")
+        await ctx.respond(embed=embed)
+
 
 @bot.command(aliases=["sb"])
 async def serverbanner(ctx):
@@ -454,16 +514,15 @@ async def ban(ctx, user:discord.Member, reason= None):
 
 @bot.slash_command(name="nuke", description="チャンネルを再作成")
 @commands.has_permissions(administrator=True)
-async def delete(ctx, channel:discord.TextChannel=None):
+async def delete(ctx, channel:discord.TextChannel=None, meonly=None):
     if not channel:channel=ctx.channel
     else:channel = discord.utils.get(ctx.guild.channels, name=channel.name)
-    #channel = channel.channel
     pos = channel.position
     await channel.delete()
     new_channel = await channel.clone()
     await new_channel.edit(position=pos)
-    await ctx.respond(f"<#{new_channel.id}>", ephemeral=True)
-
+    if meonly:await ctx.respond(f"<#{new_channel.id}>", ephemeral=True)
+    else :await ctx.respond(f"<#{new_channel.id}>")
 @bot.command(aliases=["incode"])
 async def invitecodeserver(ctx, url):
     if ctx.author.id == s.Dev:
@@ -477,7 +536,8 @@ async def invitecodeserver(ctx, url):
             online= [1 for user in guild.members if user.status != discord.Status.offline]
             stickers = [sticker  for sticker in guild.stickers]
             embed= discord.Embed(title=f"{guild.name}", description= f":crown: **Owner : **{guild.owner.mention}\n:id: **Server id : `{guild.id}`**", color= 0x6dc1d1)
-            embed.set_thumbnail(url= guild.icon.url)
+            try:embed.set_thumbnail(url= guild.icon.url)
+            except:pass
             embed.add_field(name= ":shield: Role", value= f"Roles: **{len(roles)}**", inline= True)
             embed.add_field(name= ":grinning: Emoji", value= f"Emojis: **{len(emojis)}**\nStickers: **{len(stickers)}**")
             embed.add_field(name= f":gem: Boost [{guild.premium_subscription_count}]", value= f"Tier: ** {guild.premium_tier}**")
@@ -500,46 +560,88 @@ async def invitecodeserver(ctx, url):
             except:embed.set_footer(text= f"By: {str(ctx.author)}")
             await ctx.send(embed= embed)
 
-@bot.slash_command(name="xserver", description="ID")
+@bot.slash_command(name="xserver", description="server idを入れてね!このボットが入ってるサーバーの情報を取得")
 async def xserver(ctx, id:str):
     guild = bot.get_guild(int(id))
     date_f= "%Y/%m/%d"
     tchannels= len(guild.text_channels)
     vchannels= len(guild.voice_channels)
     roles= [role for role in guild.roles]
-    emojis= [emoji for emoji in guild.emojis]
+    emojis= [1 for emoji in guild.emojis]
     online= [1 for user in guild.members if user.status != discord.Status.offline]
     stickers = [sticker  for sticker in guild.stickers]
-    embed= discord.Embed(title=f"{guild.name}", description= f":crown: **Owner : **{guild.owner.mention}\n:id: **Server id : `{guild.id}`**", color= 0x6dc1d1)
-    embed.set_thumbnail(url= guild.icon.url)
+    embed= discord.Embed(title=f"{guild.name}", description= f":crown: **Owner : **{guild.owner.mention}\n\
+        :id: **Server id : `{guild.id}`**\n\
+        :calendar_spiral: Createion : **`{guild.created_at.strftime(date_f)}`**", color= 0x6dc1d1)
+    try:embed.set_thumbnail(url= guild.icon.url)
+    except:pass
     embed.add_field(name= ":shield: Role", value= f"Roles: **{len(roles)}**", inline= True)
-    embed.add_field(name= ":grinning: Emoji", value= f"Emojis: **{len(emojis)}**\nStickers: **{len(stickers)}**")
     embed.add_field(name= f":gem: Boost [{guild.premium_subscription_count}]", value= f"Tier: ** {guild.premium_tier}**")
-    embed.add_field(name= ":calendar_spiral: Createion", value= f"**`{guild.created_at.strftime(date_f)}`**", inline=True)
+    try:
+        vanity =  await guild.vanity_invite()
+        embed.add_field(name=":link: Vanity URL", value=f"`{str(vanity).replace('https://discord', '')}`")
+    except:embed.add_field(name=":link: Vanity URL", value=f"`None`")        
+    embed.add_field(name= ":grinning: Emoji", value= f"Emojis: **{len(emojis)}**\nStickers: **{len(stickers)}**")
     embed.add_field(name= f":busts_in_silhouette: Members [{guild.member_count}]", 
             value= f"User: **{str(sum(1 for member in guild.members if not member.bot))}** |  Bot: **{str(sum(1 for member in guild.members if member.bot))}**\nOnline: **{len(online)}**")
     embed.add_field(name= f":speech_left: Channels [{tchannels+vchannels}]", 
-            value= f"Text: **{tchannels}** | Voice: **{vchannels}**\nCategory: **{len(guild.categories)}**",inline= True)
-    try:
-        vanity =  await guild.vanity_invite()
-        embed.add_field(name=":link: Vanity URL", value=f"`{str(vanity).replace('https://', '')}`")
-    except:embed.add_field(name=":link: Vanity URL", value=f"`None`")        
+            value= f"Text: **{tchannels}**\nVoice: **{vchannels}**\nCategory: **{len(guild.categories)}**",inline= True)
     try:
         req= await bot.http.request(discord.http.Route("GET", "/guilds/{sid}", sid= guild.id))
         banner_id= req["banner"]
         if banner_id:
-            banner_url= f"https://cdn.discordapp.com/banners/{guild.id}/{banner_id}.png?size=1024"
-            embed.set_image(url= banner_url)
-            embed.set_footer(text= f"By: {str(ctx.author)} | Banner is png file")
-    except:embed.set_footer(text= f"By: {str(ctx.author)}")
-    await ctx.respond(embed= embed, ephemeral=True)
+            banner_url_png= f"https://cdn.discordapp.com/banners/{guild.id}/{banner_id}.png?size=1024"
+            banner_url_gif= f"https://cdn.discordapp.com/banners/{guild.id}/{banner_id}.gif?size=1024"
+            embed.set_image(url= banner_url_png)
+            embed.set_footer(text= f"By: {str(ctx.author)} ・Banner is png file")
+            b= Button(label="See on Gif",style=discord.ButtonStyle.green)
+        async def button_callback(interaction):
+           await interaction.response.send_message(banner_url_gif, view=None, ephemeral=True)
+        b.callback= button_callback
+        view=View()
+        view.add_item(b)
+        await ctx.respond(embed=embed, view=view)
+    except:
+        embed.set_footer(text= f"By: {str(ctx.author)}")
+        await ctx.respond(embed=embed)
 
-@bot.slash_command(name="source", description="スキッドしまくったこのBOTのゴミコード貼ってます。")
+
+@bot.slash_command(name="source", description="スキッドしまくったこのBOTの雑魚ード貼ってます。")
 async def _source_code(ctx):
     e = discord.Embed(description="PythonなのにClass使ってません:sob:",color=fav)
     b = Button(label="Jump to Github", url="https://github.com/Ennuilw/-/tree/main")
     view=View()
     view.add_item(b)
     await ctx.respond(embed=e, view=view)
+
+
+
+@bot.event
+async def on_command_error(ctx, error):
+        if isinstance(error, discord.ext.commands.errors.MissingPermissions):
+            embed = discord.Embed(title="-MissingPermissions", description=f"権限不足ですよ。出直せバカ", color=0xff0000)
+            await ctx.send(embed=embed)
+        elif isinstance(error, discord.ext.commands.errors.BotMissingPermissions):
+            embed = discord.Embed(title="-BotMissingPermissions", description=f"当botの権限が不当に制限されています。信用ないならなぜ入れたんです？", color=0xff0000)
+            await ctx.send(embed=embed)
+        elif isinstance(error, discord.ext.commands.errors.CommandNotFound):
+            embed = discord.Embed(title="-CommandNotFound", description=f"おいおっさんｗｗｗそんなこまんどねーぞｗｗｗｗｗちゃんと見ろメクラｗｗｗｗｗ。", color=0xff0000)
+            await ctx.send(embed=embed)
+        elif isinstance(error, discord.ext.commands.errors.MemberNotFound):
+            embed = discord.Embed(title="-MemberNotFound", description=f"指定されたユーザーが発見されませんでした。", color=0xff0000)
+            await ctx.send(embed=embed)
+        elif isinstance(error, discord.ext.commands.errors.BadArgument):
+            embed = discord.Embed(title="-BadArgument", description=f"指定された引数がエラーを起こしているため実行出来ません。", color=0xff0000)
+            await ctx.send(embed=embed) 
+        elif isinstance(error, discord.ext.commands.errors.MissingRequiredArgument):
+            embed = discord.Embed(title="-BadArgument", description=f"必要な引数が足りません。", color=0xff0000)
+            await ctx.send(embed=embed)
+        elif isinstance(error,discord.ext.commands.errors.MissingRole):
+            embed = discord.Embed(title="-MissingRole", description=f"ロール持ってないからだめよ", color=0xff0000)
+            await ctx.send(embed=embed)
+        elif isinstance(error, discord.ext.commands.errors.CheckFailure):
+            embed = discord.Embed(title="-CheckFailure", description=f"Something error: \ndm only or Dev only command", color=0xff0000)
+            await ctx.send(embed=embed)
+        else:raise error
 
 bot.run(s.token)
