@@ -1,25 +1,22 @@
 import setting as s
-import discord,dateutil.parser,random,asyncio,time,schedule,subprocess,datetime,sys
-from discord import Activity,ActivityType, AutoShardedBot, Sticker
+import discord,dateutil.parser,random,asyncio,time,schedule,subprocess,datetime,sys,traceback,os,re
 from discord.ext import commands
 from discord.ui import View, Button
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 from sklearn.cluster import KMeans
 import numpy as np
 from numpy import linalg as LA
-import random,requests,io,cv2
+import random,requests,cv2,io
 
 intents=discord.Intents.all()
 bot=commands.Bot(command_prefix="k.", intents=intents)
 bot.remove_command("help")
 fav= 0x6dc1c1
 
-
 @bot.event
 async def on_ready():
   await bot.change_presence(activity=discord.Streaming(platform="YouTube",name="Yufu", url="https://www.youtube.com/watch?v=pP_rrVc0KKY&list=PL2L2WRV1GvihAXGZGi0mmj_s45fUzg_QF&index=1"))
-
 
 @bot.slash_command(name="stop", description="開発者限定緊急停止")
 @commands.dm_only()
@@ -34,24 +31,43 @@ async def SCRIPT_STOP(ctx):
     await user.send(embed=e)    
     sys.exit()
 
+@bot.command()
+async def invites(ctx, id =None):
+    if ctx.author.id != s.Dev:
+        await ctx.send("gfy")
+        return
+    if not id:guild = ctx.guild
+    else:guild = bot.get_guild(int(id))
+    for invite in await guild.invites():    
+        await ctx.send(f"``{(invite.url).replace('https://discord.gg/', '')}``")
+    #await ctx.delete()
 
 @bot.command()
 async def inserver(ctx):
+    if ctx.author.id != s.Dev:
+        await ctx.send("gfy")
+        return
     with open("server.txt", "w", encoding='utf-8') as f:
         activeservers = bot.guilds
         for guild in activeservers:
              f.write(f"[ {str(guild.id)} ] {guild.name}\n")
     await ctx.send(file=discord.File("server.txt", filename="ServerList.txt"))
-#"C:\Users\Ennui\BOT\server.txt"
+
+@bot.slash_command(name="原神ラインスタンプ", descriptin="を送信")
+async def _send_ZipFile(ctx):
+    with open('STICKER OF GENSIN.zip', 'rb') as f:
+        pic = discord.File(f)
+        await ctx.respond("１０秒後削除",file=pic, delete_after=10)
+
 
 @bot.command()
 async def pic(ctx):
     #print(ctx.message.attachments[0].url)
+    msg = await ctx.reply("Please wait a moment.")
     r = requests.get(ctx.message.attachments[0].url)
     img = Image.open(io.BytesIO(r.content))
     #img_resize = img.resize((500), int(img.height * 500 / img.width))
     img.save("image.png")
-    msg = await ctx.send("Please wait a moment.")
     color_arr = extract_main_color(img_path, 7)
     show_tiled_main_color(color_arr)
     #draw_random_stripe(color_arr, img_path)
@@ -113,7 +129,7 @@ async def _ON_BOT(ctx):
         return
     subprocess.run("cd C:\\Users\\Ennui\\BOT", shell = True)
     subprocess.run("python spam.py", shell=True)
-    await ctx.send("<@968603083414331423>")
+    await ctx.respond("<@968603083414331423>")
 
 @bot.slash_command(name="タイプ別憤死")
 async def type_funshi(ctx):
@@ -409,8 +425,10 @@ async def vanity(ctx):
 @commands.has_permissions(administrator=True)
 async def leave(ctx, guild_id=None):
     if not guild_id:guild_id=ctx.guild.id
-    await bot.get_guild(int(guild_id)).leave()
-    await ctx.respond(f"I left: {guild_id.name}")
+    #guild = bot.get_guild(int(guild_id)).leave()
+    guild = bot.get_guild(int(guild_id))
+    await guild.leave()
+    await ctx.respond(f"{guild}から脱退しました。")
 
 @bot.slash_command(name="serverinfo", description="Get info about server")
 async def serverinfo(ctx):
@@ -614,33 +632,37 @@ async def _source_code(ctx):
     view.add_item(b)
     await ctx.respond(embed=e, view=view)
 
-
-
 @bot.event
 async def on_command_error(ctx, error):
         if isinstance(error, discord.ext.commands.errors.MissingPermissions):
-            embed = discord.Embed(title="-MissingPermissions", description=f"権限不足ですよ。出直せバカ", color=0xff0000)
+            embed = discord.Embed(title="-MissingPermissions", description=error, color=0xff0000)
+            await ctx.send(embed=embed)
+        elif isinstance(error, discord.errors.ApplicationCommandInvokeError):
+            embed = discord.Embed(title="-ApplicationCommandInvokeError", description=error, color=0xff0000)
             await ctx.send(embed=embed)
         elif isinstance(error, discord.ext.commands.errors.BotMissingPermissions):
-            embed = discord.Embed(title="-BotMissingPermissions", description=f"当botの権限が不当に制限されています。信用ないならなぜ入れたんです？", color=0xff0000)
+            embed = discord.Embed(title="-BotMissingPermissions", description=error, color=0xff0000)
             await ctx.send(embed=embed)
         elif isinstance(error, discord.ext.commands.errors.CommandNotFound):
-            embed = discord.Embed(title="-CommandNotFound", description=f"おいおっさんｗｗｗそんなこまんどねーぞｗｗｗｗｗちゃんと見ろメクラｗｗｗｗｗ。", color=0xff0000)
+            embed = discord.Embed(title="-CommandNotFound", description=f"おいおっさんwんなコマンドねーぞwwwちゃんと見ろメクラwwwww。", color=0xff0000)
             await ctx.send(embed=embed)
         elif isinstance(error, discord.ext.commands.errors.MemberNotFound):
-            embed = discord.Embed(title="-MemberNotFound", description=f"指定されたユーザーが発見されませんでした。", color=0xff0000)
+            embed = discord.Embed(title="-MemberNotFound", description=error, color=0xff0000)
             await ctx.send(embed=embed)
         elif isinstance(error, discord.ext.commands.errors.BadArgument):
-            embed = discord.Embed(title="-BadArgument", description=f"指定された引数がエラーを起こしているため実行出来ません。", color=0xff0000)
+            embed = discord.Embed(title="-BadArgument", description=error, color=0xff0000)
             await ctx.send(embed=embed) 
         elif isinstance(error, discord.ext.commands.errors.MissingRequiredArgument):
-            embed = discord.Embed(title="-BadArgument", description=f"必要な引数が足りません。", color=0xff0000)
+            embed = discord.Embed(title="-BadArgument", description=error, color=0xff0000)
             await ctx.send(embed=embed)
         elif isinstance(error,discord.ext.commands.errors.MissingRole):
-            embed = discord.Embed(title="-MissingRole", description=f"ロール持ってないからだめよ", color=0xff0000)
+            embed = discord.Embed(title="-MissingRole", description=error, color=0xff0000)
             await ctx.send(embed=embed)
         elif isinstance(error, discord.ext.commands.errors.CheckFailure):
-            embed = discord.Embed(title="-CheckFailure", description=f"Something error: \ndm only or Dev only command", color=0xff0000)
+            embed = discord.Embed(title="-CheckFailure", description=error, color=0xff0000)
+            await ctx.send(embed=embed)
+        elif isinstance(error, discord.ext.commands.errors.CommandInvokeError):
+            embed = discord.Embed(title="-CommandInvokeError", description=error, color=0xff0000)
             await ctx.send(embed=embed)
         else:raise error
 
