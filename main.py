@@ -1,7 +1,10 @@
+from asyncio.windows_events import NULL
 import setting as s
-import discord,dateutil.parser,random,asyncio,time,schedule,subprocess,datetime,sys,traceback,os,re
+import discord,dateutil.parser,random,asyncio,time,schedule,subprocess,datetime,sys,traceback,os,re,spotipy
 from discord.ext import commands
-from discord.ui import View, Button
+from discord.ui import View, Button, Select
+
+from spotipy.oauth2 import SpotifyClientCredentials
 
 from PIL import Image
 from sklearn.cluster import KMeans
@@ -13,10 +16,17 @@ intents=discord.Intents.all()
 bot=commands.Bot(command_prefix="k.", intents=intents)
 bot.remove_command("help")
 fav= 0x6dc1c1
+S_color=0x1db954
+Spotify_logo=["https://media.discordapp.net/attachments/973063112548814878/1007736488265523280/Spotify_logo_without_text.svg.png?width=671&height=671",
+                "https://media.discordapp.net/attachments/973063112548814878/1007736897570873384/Spotify_Icon_RGB_White.png?width=671&height=671"]
+sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
+    client_id="ed2c175ef05745a9824fd2e4ef391d8f",
+    client_secret="dc552a06545749589db1e5c5e5c40102"))
+
 
 @bot.event
 async def on_ready():
-  await bot.change_presence(activity=discord.Streaming(platform="YouTube",name="Yufu", url="https://www.youtube.com/watch?v=pP_rrVc0KKY&list=PL2L2WRV1GvihAXGZGi0mmj_s45fUzg_QF&index=1"))
+  await bot.change_presence(activity=discord.Streaming(name="Yufu", url="https://youtu.be/pP_rrVc0KKY?list=PL2L2WRV1GvihAXGZGi0mmj_s45fUzg_QF"))
 
 @bot.slash_command(name="stop", description="開発者限定緊急停止")
 @commands.dm_only()
@@ -30,6 +40,16 @@ async def SCRIPT_STOP(ctx):
         description=f"{datetime.datetime.now()}")
     await user.send(embed=e)    
     sys.exit()
+
+@bot.slash_command(name="spotifysearch", description="Spotify楽曲を検索・・・日本語だと検索エラーとか出る")
+async def search(ctx, *, keyword):
+    result = sp.search(q=keyword, limit=5)
+    e = discord.Embed(description="<:_info:1007535167952392203> **見方**\n```曲名 [アルバム名] - アーティスト```",color=S_color).set_thumbnail(url=random.choice(Spotify_logo))
+    for idx, track in enumerate(result['tracks']['items']):
+        e.add_field(name=f"{idx + 1} - Detales", value=f"```{track['name']} [{track['album']['name']}] - {track['artists'][0]['name']}\n```\
+            <:Icon_jumptourl:1007535375033581588> _{track['external_urls']['spotify']}_",inline=False)
+    await ctx.respond(embed=e)
+
 
 @bot.command()
 async def invites(ctx, id =None):
@@ -63,7 +83,7 @@ async def _send_ZipFile(ctx):
 @bot.command()
 async def pic(ctx):
     #print(ctx.message.attachments[0].url)
-    msg = await ctx.reply("Please wait a moment.")
+    msg = await ctx.reply("Please wait a moment.<a:Loading_2:1007527284753834014>")
     r = requests.get(ctx.message.attachments[0].url)
     img = Image.open(io.BytesIO(r.content))
     #img_resize = img.resize((500), int(img.height * 500 / img.width))
@@ -72,7 +92,7 @@ async def pic(ctx):
     show_tiled_main_color(color_arr)
     #draw_random_stripe(color_arr, img_path)
     file = discord.File("./image/stripe_image.png", filename="stripe.png")
-    await msg.edit(content="Done",file=file)
+    await msg.edit(content="Done<a:VerifyMark_1:987128219658514484>",file=file)
 """
 def download_img(url, file_name):
     r = requests.get(url, stream=True)
@@ -133,9 +153,7 @@ async def _ON_BOT(ctx):
 
 @bot.slash_command(name="タイプ別憤死")
 async def type_funshi(ctx):
-    text_funshi = """
-**典型的憤死パターン**
-
+    text_funshi = """**典型的憤死パターン**<a:funshi:1004311411360546946>
 _1.発狂型憤死_
 明らかに劣勢な状態になってから露骨に発作を起こしキチガイムーヴを始めるタイプ。
 ネタに走って有耶無耶にしようという意図が見え見えである。
@@ -155,14 +173,17 @@ _4.ノーダメアピール型憤死_
 _5.スルー型憤死_
 突然話題を変えることで露骨にスルーアピールをするタイプ。
 指摘されるとすぐ必死になって否定をしてくることが多い。"""
-    await ctx.respond(text_funshi)
+    b = Button(label="十字軍に行く", url="https://discord.gg/hunshi")
+    view = View()
+    view.add_item(b)
+    await ctx.respond(text_funshi, view=view)
 
 @bot.slash_command(name="憤死ワード")
 async def word_list(ctx):
     b = Button(label="十字軍に行く", url="https://discord.gg/hunshi")
     view = View()
     view.add_item(b)
-    await ctx.respond("""**典型的憤死ワード集**
+    await ctx.respond("""**典型的憤死ワード集**<a:funshi:1004311411360546946>
 ・荒らしで時間無駄にしてて草
 ・しょうもないことして楽しい？
 ・BANすればいいだけ 残念だったな
@@ -183,7 +204,7 @@ async def boosters(ctx):
 
 @bot.command()
 async def gensin(ctx):
-    text = ("""
+    text = ("""<:gensin_L_sticker_futao_3:1005709133179256894>
 https://discord.gg/fqyPF8UUeE
 https://discord.gg/2eQVbVMHVm
 https://discord.gg/9Gz4CyBsRv
@@ -248,11 +269,11 @@ async def about(ctx):
     members = 0
     for guild in bot.guilds:members += guild.member_count - 1
     embed= discord.Embed(color= 0x6dc1d1)
-    embed.add_field(name= "Customers",value= f"Servers **:** `{str(len(bot.guilds))}`\nMembers **:** `{str(members)}`", inline= False)
-    embed.add_field(name= "Dev", value= f"{user.mention}", inline= False)
+    embed.add_field(name= "<:icons_serverinsight:981767862463107132>Customers",value= f"Servers **:** `{str(len(bot.guilds))}`\nMembers **:** `{str(members)}`", inline= False)
+    embed.add_field(name= "<:icons_supportteam:1007534581467074642>Dev", value= f"{user.mention}", inline= False)
     embed.set_author(name= "About this bot")
     embed.set_thumbnail(url=bot.user.avatar.url)
-    embed.add_field(name="【注釈】",value="適当にスクリプト書いただけ")
+    embed.add_field(name="<:icons_info:1007531327333093477>注釈",value="適当にスクリプト書いただけ")
     embed.set_footer(text=f"By: {str(ctx.author)}")
     b = Button(label="Support Server", url="https://discord.gg/owen")
     b2 = Button(label="Invite URL", url=f"https://discord.com/oauth2/authorize?client_id=979001395703341096&permissions=1644971949559&scope=bot%20applications.commands")
@@ -285,12 +306,14 @@ async def banner(ctx, user:discord.Member=None):
         await ctx.respond(embed=e)
     except:await ctx.respond("Bannerが検出できない")
 
+
+
 @bot.slash_command(name="track", description="現在アクティビティにあるSpotifyの楽曲のURLを送信")
 async def track(ctx, user:discord.Member=None):
     if not user: user=ctx.author
     spotify_result = next((activity for activity in user.activities if isinstance(activity, discord.Spotify)), None)
     if spotify_result is None:await ctx.respond(f"{user.name} is not listening to Spotify!")
-    if spotify_result:await ctx.respond(f"https://open.spotify.com/track/{spotify_result.track_id}")
+    if spotify_result:await ctx.respond(f"> https://open.spotify.com/track/{spotify_result.track_id}")
 
 @bot.slash_command(name="spotify", description="アクティビティからSpotifyの楽曲情報を送信")
 async def spotify(ctx, user:discord.Member=None):
@@ -311,7 +334,7 @@ async def spotify(ctx, user:discord.Member=None):
         embed.set_footer(text=f"By: {str(ctx.author)}")
         view = View()
         b = Button(label="URL", url=f"https://open.spotify.com/track/{_spotify_result.track_id}")
-        jacket = Button(label="see jacket", style=discord.ButtonStyle.green)
+        jacket = Button(label="see jacket", style=discord.ButtonStyle.green, emoji="<:App_logo_spotify_p:1007557495436365905>")#, row=1
         async def Button_callback(interaction:discord.Interaction):
             await interaction.response.send_message(_spotify_result.album_cover_url, ephemeral=True)
         jacket.callback = Button_callback
@@ -320,7 +343,7 @@ async def spotify(ctx, user:discord.Member=None):
         await ctx.respond(embed=embed, view=view)
 
 @bot.command(aliases=["s"])
-async def spotify_(ctx, user:discord.Member=None):
+async def spotify(ctx, user:discord.Member=None):
     if not user:user=ctx.author
     _spotify_result= next((activity for activity in user.activities if isinstance(activity, discord.Spotify)), None)
     if _spotify_result is None:await ctx.respond(f"{user.name} is not listening to Spotify!")
@@ -338,15 +361,17 @@ async def spotify_(ctx, user:discord.Member=None):
         embed.set_footer(text=f"By: {str(ctx.author)}")
         view = View()
         b = Button(label="URL", url=f"https://open.spotify.com/track/{_spotify_result.track_id}")
-        jacket = Button(label="see jacket", style=discord.ButtonStyle.green)
+        jacket = Button(label="see jacket", style=discord.ButtonStyle.green, emoji="<:App_logo_spotify_white:1007559242984734720>")#, row=1
         async def Button_callback(interaction:discord.Interaction):
             await interaction.response.send_message(_spotify_result.album_cover_url, ephemeral=True)
         jacket.callback = Button_callback
         view.add_item(b)
         view.add_item(jacket)
-        await ctx.respond(embed=embed, view=view)
+        await ctx.message.reply(embed=embed, view=view, mention_author=False)
 
-@bot.slash_command(name="invite", description="Botをメンションして招待URLを生成")
+
+
+@bot.slash_command(name="invite", description="Botをメンションして招待URLを生成。 IDを入れるやつは馬鹿")
 async def invite(ctx, mention:discord.Member):
     e=discord.Embed(description=f"{id.mention}(**{id.id}**)", color=fav)
     date_format="%Y/%m/%d %H:%M"
