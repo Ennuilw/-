@@ -26,7 +26,7 @@ sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
 
 @bot.event
 async def on_ready():
-  await bot.change_presence(activity=discord.Streaming(name="Yufu", url="https://youtu.be/pP_rrVc0KKY?list=PL2L2WRV1GvihAXGZGi0mmj_s45fUzg_QF"))
+  await bot.change_presence(activity=discord.Streaming(platform="YouTube",name="Yufu", url="https://youtu.be/pP_rrVc0KKY?list=PL2L2WRV1GvihAXGZGi0mmj_s45fUzg_QF"))
 
 @bot.slash_command(name="stop", description="開発者限定緊急停止")
 @commands.dm_only()
