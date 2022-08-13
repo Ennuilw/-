@@ -17,19 +17,16 @@ bot=commands.Bot(command_prefix="k.", intents=intents)
 bot.remove_command("help")
 fav= 0x6dc1c1
 S_color=0x1db954
+sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=s.spotify_client_id,client_secret=s.spotify_client_secret))
 Spotify_logo=["https://media.discordapp.net/attachments/973063112548814878/1007736488265523280/Spotify_logo_without_text.svg.png?width=671&height=671",
                 "https://media.discordapp.net/attachments/973063112548814878/1007736897570873384/Spotify_Icon_RGB_White.png?width=671&height=671"]
-sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
-    client_id="ed2c175ef05745a9824fd2e4ef391d8f",
-    client_secret="dc552a06545749589db1e5c5e5c40102"))
-
 
 @bot.event
 async def on_ready():
-  await bot.change_presence(activity=discord.Streaming(platform="YouTube",name="Yufu", url="https://youtu.be/pP_rrVc0KKY?list=PL2L2WRV1GvihAXGZGi0mmj_s45fUzg_QF"))
+  await bot.change_presence(activity=discord.Streaming(platform="YouTube",name="Yufu", url="https://www.youtube.com/watch?v=pP_rrVc0KKY&list=PL2L2WRV1GvihAXGZGi0mmj_s45fUzg_QF&index=1"))
 
 @bot.slash_command(name="stop", description="開発者限定緊急停止")
-@commands.dm_only()
+#@commands.dm_only()
 async def SCRIPT_STOP(ctx):
     if ctx.author.id != s.Dev:
         await ctx.respond("帰れ")
@@ -78,6 +75,64 @@ async def _send_ZipFile(ctx):
     with open('STICKER OF GENSIN.zip', 'rb') as f:
         pic = discord.File(f)
         await ctx.respond("１０秒後削除",file=pic, delete_after=10)
+
+
+@bot.slash_command(name="原神聖遺物スコア計算", desciption="小数点も要する") # | 聖遺物: 花,羽,杯=1, 時,冠=2
+async def _clac_score(ctx,会心率:float=None, 会心ダメージ:float=None, 攻撃_防御力:float=None):
+    if not 攻撃_防御力: 攻撃_防御力=0
+    if not 会心ダメージ:会心ダメージ=0
+    if not 会心率:会心率=0
+    score = 攻撃_防御力 + (会心率 * 2) + 会心ダメージ
+
+    e = discord.Embed(description=f"**スコア** : **{round(score, 1)}**\n\n> 会心率```{会心率} %```\n> 会心ダメージ```{会心ダメージ} %```\n> 攻撃力・防御力```{攻撃_防御力} %```", color=fav)
+    e.set_footer(text="20Lv想定でサブスコアのみ計算してます | Beta ver")
+    await ctx.respond(embed=e)
+
+"""    if score >= 45:
+        e.title="<:icons_Correct:1007531113591357450>"
+        else:
+            e.title="<:icons_Wrong:1007531146256580648>"
+    else:
+        if score >= 30:
+            e.title="<:icons_Correct:1007531113591357450>"
+        else:
+            e.title="<:icons_Wrong:1007531146256580648>
+@bot.slash_command(name="原神聖遺物スコア計算", desciption="小数点も要する") # | 聖遺物: 花,羽,杯=1, 時,冠=2
+async def _clac_score(ctx,会心率:float=None, 会心ダメージ:float=None, 攻撃_防御力:float=None):
+    if not 攻撃_防御力: 攻撃_防御力=0
+    if not 会心ダメージ:会心ダメージ=0
+    if not 会心率:会心率=0
+    score = 攻撃_防御力 + (会心率 * 2) + 会心ダメージ
+    e = discord.Embed(description=f"**スコア** : **{round(score, 1)}**\n\n> 会心率```{会心率} %```\n> 会心ダメージ```{会心ダメージ} %```\n> 攻撃力・防御力```{攻撃_防御力} %```", color=fav)
+    select = Select(
+        placeholder="聖遺物を選択してください",
+        options=[
+            discord.SelectOption(label="生きの花",value="0x1"),
+            discord.SelectOption(label="死の羽",  value="0x2"),
+            discord.SelectOption(label="時の砂",  value="0x3"),
+            discord.SelectOption(label="空の杯",  value="0x4"),
+            discord.SelectOption(label="理の冠",  value="0x5")])
+    async def callback(interaction):
+        if select.values[0] == "0x3":
+            if score >= 45:e.title="<:icons_Correct:1007531113591357450>"
+            else:e.title="<:icons_Wrong:1007531146256580648>"
+        elif select.values[0] == "0x5":
+            if score >= 45:e.title="<:icons_Correct:1007531113591357450>"
+            else:e.title="<:icons_Wrong:1007531146256580648>"
+        else:
+            if score >= 30:e.title="<:icons_Correct:1007531113591357450>"
+            else:e.title="<:icons_Wrong:1007531146256580648>"
+    select.callback = callback
+    #if :
+        #if score >= 45:e.title="<:icons_Correct:1007531113591357450>"
+        #else:e.title="<:icons_Wrong:1007531146256580648>"
+    #else:
+        #if score >= 30:e.title="<:icons_Correct:1007531113591357450>"
+        #else:e.title="<:icons_Wrong:1007531146256580648>"
+    view = View()
+    view.add_item(select)
+    e.set_footer(text="20Lv想定でサブスコアのみ計算してます | Beta ver")
+    await ctx.respond(embed=e, view = view)"""
 
 
 @bot.command()
@@ -176,6 +231,7 @@ _5.スルー型憤死_
     b = Button(label="十字軍に行く", url="https://discord.gg/hunshi")
     view = View()
     view.add_item(b)
+    b.disabled=True
     await ctx.respond(text_funshi, view=view)
 
 @bot.slash_command(name="憤死ワード")
@@ -183,6 +239,7 @@ async def word_list(ctx):
     b = Button(label="十字軍に行く", url="https://discord.gg/hunshi")
     view = View()
     view.add_item(b)
+    b.disabled=True
     await ctx.respond("""**典型的憤死ワード集**<a:funshi:1004311411360546946>
 ・荒らしで時間無駄にしてて草
 ・しょうもないことして楽しい？
