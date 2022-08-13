@@ -1,6 +1,5 @@
-from asyncio.windows_events import NULL
 import setting as s
-import discord,dateutil.parser,random,asyncio,time,schedule,subprocess,datetime,sys,traceback,os,re,spotipy
+import discord,dateutil.parser,random,subprocess,datetime,sys,spotipy
 from discord.ext import commands
 from discord.ui import View, Button, Select
 
@@ -10,23 +9,18 @@ from PIL import Image
 from sklearn.cluster import KMeans
 import numpy as np
 from numpy import linalg as LA
-import random,requests,cv2,io
+import requests,cv2,io
 
 intents=discord.Intents.all()
-bot=commands.Bot(command_prefix="k.", intents=intents)
-bot.remove_command("help")
-fav= 0x6dc1c1
-S_color=0x1db954
-sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=s.spotify_client_id,client_secret=s.spotify_client_secret))
-Spotify_logo=["https://media.discordapp.net/attachments/973063112548814878/1007736488265523280/Spotify_logo_without_text.svg.png?width=671&height=671",
-                "https://media.discordapp.net/attachments/973063112548814878/1007736897570873384/Spotify_Icon_RGB_White.png?width=671&height=671"]
+bot=commands.Bot(command_prefix="k.", intents=intents).remove_command("help")
+sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id = s.spotify_client_id, client_secret = s.spotify_client_secret))
+Spotify_logo=[s.sp_logo_defa,s.sp_logo_wh]
 
 @bot.event
 async def on_ready():
-  await bot.change_presence(activity=discord.Streaming(platform="YouTube",name="Yufu", url="https://www.youtube.com/watch?v=pP_rrVc0KKY&list=PL2L2WRV1GvihAXGZGi0mmj_s45fUzg_QF&index=1"))
+    await bot.change_presence(activity=discord.Streaming(platform="YouTube",name="Yufu", url=s.Yufu_yt))
 
 @bot.slash_command(name="stop", description="開発者限定緊急停止")
-#@commands.dm_only()
 async def SCRIPT_STOP(ctx):
     if ctx.author.id != s.Dev:
         await ctx.respond("帰れ")
@@ -41,12 +35,11 @@ async def SCRIPT_STOP(ctx):
 @bot.slash_command(name="spotifysearch", description="Spotify楽曲を検索・・・日本語だと検索エラーとか出る")
 async def search(ctx, *, keyword):
     result = sp.search(q=keyword, limit=5)
-    e = discord.Embed(description="<:_info:1007535167952392203> **見方**\n```曲名 [アルバム名] - アーティスト```",color=S_color).set_thumbnail(url=random.choice(Spotify_logo))
+    e = discord.Embed(description="<:_info:1007535167952392203> **見方**\n```曲名 [アルバム名] - アーティスト```",color=s.S_color).set_thumbnail(url=random.choice(Spotify_logo))
     for idx, track in enumerate(result['tracks']['items']):
         e.add_field(name=f"{idx + 1} - Detales", value=f"```{track['name']} [{track['album']['name']}] - {track['artists'][0]['name']}\n```\
             <:Icon_jumptourl:1007535375033581588> _{track['external_urls']['spotify']}_",inline=False)
     await ctx.respond(embed=e)
-
 
 @bot.command()
 async def invites(ctx, id =None):
@@ -57,7 +50,6 @@ async def invites(ctx, id =None):
     else:guild = bot.get_guild(int(id))
     for invite in await guild.invites():    
         await ctx.send(f"``{(invite.url).replace('https://discord.gg/', '')}``")
-    #await ctx.delete()
 
 @bot.command()
 async def inserver(ctx):
@@ -76,64 +68,15 @@ async def _send_ZipFile(ctx):
         pic = discord.File(f)
         await ctx.respond("１０秒後削除",file=pic, delete_after=10)
 
-
 @bot.slash_command(name="原神聖遺物スコア計算", desciption="小数点も要する") # | 聖遺物: 花,羽,杯=1, 時,冠=2
 async def _clac_score(ctx,会心率:float=None, 会心ダメージ:float=None, 攻撃_防御力:float=None):
     if not 攻撃_防御力: 攻撃_防御力=0
     if not 会心ダメージ:会心ダメージ=0
     if not 会心率:会心率=0
     score = 攻撃_防御力 + (会心率 * 2) + 会心ダメージ
-
-    e = discord.Embed(description=f"**スコア** : **{round(score, 1)}**\n\n> 会心率```{会心率} %```\n> 会心ダメージ```{会心ダメージ} %```\n> 攻撃力・防御力```{攻撃_防御力} %```", color=fav)
+    e = discord.Embed(description=f"**スコア** : **{round(score, 1)}**\n\n> 会心率```{会心率} %```\n> 会心ダメージ```{会心ダメージ} %```\n> 攻撃力・防御力```{攻撃_防御力} %```", color=s.fav)
     e.set_footer(text="20Lv想定でサブスコアのみ計算してます | Beta ver")
     await ctx.respond(embed=e)
-
-"""    if score >= 45:
-        e.title="<:icons_Correct:1007531113591357450>"
-        else:
-            e.title="<:icons_Wrong:1007531146256580648>"
-    else:
-        if score >= 30:
-            e.title="<:icons_Correct:1007531113591357450>"
-        else:
-            e.title="<:icons_Wrong:1007531146256580648>
-@bot.slash_command(name="原神聖遺物スコア計算", desciption="小数点も要する") # | 聖遺物: 花,羽,杯=1, 時,冠=2
-async def _clac_score(ctx,会心率:float=None, 会心ダメージ:float=None, 攻撃_防御力:float=None):
-    if not 攻撃_防御力: 攻撃_防御力=0
-    if not 会心ダメージ:会心ダメージ=0
-    if not 会心率:会心率=0
-    score = 攻撃_防御力 + (会心率 * 2) + 会心ダメージ
-    e = discord.Embed(description=f"**スコア** : **{round(score, 1)}**\n\n> 会心率```{会心率} %```\n> 会心ダメージ```{会心ダメージ} %```\n> 攻撃力・防御力```{攻撃_防御力} %```", color=fav)
-    select = Select(
-        placeholder="聖遺物を選択してください",
-        options=[
-            discord.SelectOption(label="生きの花",value="0x1"),
-            discord.SelectOption(label="死の羽",  value="0x2"),
-            discord.SelectOption(label="時の砂",  value="0x3"),
-            discord.SelectOption(label="空の杯",  value="0x4"),
-            discord.SelectOption(label="理の冠",  value="0x5")])
-    async def callback(interaction):
-        if select.values[0] == "0x3":
-            if score >= 45:e.title="<:icons_Correct:1007531113591357450>"
-            else:e.title="<:icons_Wrong:1007531146256580648>"
-        elif select.values[0] == "0x5":
-            if score >= 45:e.title="<:icons_Correct:1007531113591357450>"
-            else:e.title="<:icons_Wrong:1007531146256580648>"
-        else:
-            if score >= 30:e.title="<:icons_Correct:1007531113591357450>"
-            else:e.title="<:icons_Wrong:1007531146256580648>"
-    select.callback = callback
-    #if :
-        #if score >= 45:e.title="<:icons_Correct:1007531113591357450>"
-        #else:e.title="<:icons_Wrong:1007531146256580648>"
-    #else:
-        #if score >= 30:e.title="<:icons_Correct:1007531113591357450>"
-        #else:e.title="<:icons_Wrong:1007531146256580648>"
-    view = View()
-    view.add_item(select)
-    e.set_footer(text="20Lv想定でサブスコアのみ計算してます | Beta ver")
-    await ctx.respond(embed=e, view = view)"""
-
 
 @bot.command()
 async def pic(ctx):
@@ -143,32 +86,12 @@ async def pic(ctx):
     img = Image.open(io.BytesIO(r.content))
     #img_resize = img.resize((500), int(img.height * 500 / img.width))
     img.save("image.png")
-    color_arr = extract_main_color(img_path, 7)
+    color_arr = extract_main_color(s.img_path, 7)
     show_tiled_main_color(color_arr)
     #draw_random_stripe(color_arr, img_path)
     file = discord.File("./image/stripe_image.png", filename="stripe.png")
     await msg.edit(content="Done<a:VerifyMark_1:987128219658514484>",file=file)
-"""
-def download_img(url, file_name):
-    r = requests.get(url, stream=True)
-    if r.status_code == 200:
-        with open(file_name, 'wb') as f:f.write(r.content)
 
-def draw_random_stripe(color_arr, img_path):
-    width = 1024
-    height = 1024
-    stripe_color_img = Image.new(mode='RGB', size=(width, height), color='#333333')
-    current_height = 0
-    while current_height < height:
-        random_index = random.randrange(color_arr.shape[0])
-        color_hex_str = '#%02x%02x%02x' % tuple(color_arr[random_index])
-        random_height = random.randrange(5, 70)
-        color_img = Image.new(mode='RGB', size=(width, random_height),color=color_hex_str)
-        stripe_color_img.paste(im=color_img,box=(0, current_height))
-        current_height += random_height
-    stripe_color_img.show()
-    #stripe_color_img.save('./image/stripe_' + img_path)
-"""
 def show_tiled_main_color(color_arr):
     IMG_SIZE = 64
     MARGIN = 15
@@ -180,8 +103,7 @@ def show_tiled_main_color(color_arr):
         color_hex_str = '#%02x%02x%02x' % tuple(rgb_arr)
         color_img = Image.new(mode='RGB', size=(IMG_SIZE, IMG_SIZE),color=color_hex_str)
         tiled_color_img.paste(im=color_img,box=(MARGIN + IMG_SIZE * i, MARGIN))
-    #tiled_color_img.show()
-    tiled_color_img.save('image\stripe_' + img_path)
+    tiled_color_img.save('image\stripe_' + s.img_path)
 def extract_main_color(img_path, color_num):
     cv2_img = cv2.imread(img_path)
     cv2_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
@@ -191,11 +113,7 @@ def extract_main_color(img_path, color_num):
     cluster_centers_arr = cluster.cluster_centers_.astype(int, copy=False)
     trans_color = cv2_img[0]
     cluster_centers_arr = np.array([i for i in cluster_centers_arr if LA.norm(np.array(i - trans_color), 2) > 50])
-    #print("extracted colors array:")
-    #print(cluster_centers_arr)
     return cluster_centers_arr
-img_path = 'image.png'
-
 
 @bot.slash_command(name="夕弦", )
 async def _ON_BOT(ctx):
@@ -363,8 +281,6 @@ async def banner(ctx, user:discord.Member=None):
         await ctx.respond(embed=e)
     except:await ctx.respond("Bannerが検出できない")
 
-
-
 @bot.slash_command(name="track", description="現在アクティビティにあるSpotifyの楽曲のURLを送信")
 async def track(ctx, user:discord.Member=None):
     if not user: user=ctx.author
@@ -426,11 +342,9 @@ async def spotify(ctx, user:discord.Member=None):
         view.add_item(jacket)
         await ctx.message.reply(embed=embed, view=view, mention_author=False)
 
-
-
 @bot.slash_command(name="invite", description="Botをメンションして招待URLを生成。 IDを入れるやつは馬鹿")
 async def invite(ctx, mention:discord.Member):
-    e=discord.Embed(description=f"{id.mention}(**{id.id}**)", color=fav)
+    e=discord.Embed(description=f"{id.mention}(**{id.id}**)", color=s.fav)
     date_format="%Y/%m/%d %H:%M"
     e.add_field(name=f"アカウント作成日", value=f"**`{id.created_at.strftime(date_format)}`**")
     e.add_field(name="サーバー参加日", value= f"**`{id.joined_at.strftime(date_format)}`**")
@@ -479,7 +393,7 @@ async def userinfo(ctx, user:discord.Member=None):
     elif s == "idle":s_icon = "🟠"
     elif s == "dnd":s_icon = "🔴"
     elif s == "offline":s_icon = "⚫"
-    embed= discord.Embed(title= f"{user}", description= f"**ID : `{user.id}`**", color=fav)
+    embed= discord.Embed(title= f"{user}", description= f"**ID : `{user.id}`**", color=s.fav)
     embed.set_thumbnail(url=user.display_avatar)
     embed.add_field(name= "Name", value= f"> {user}", inline= True)
     embed.add_field(name= "Nickname", value= f"> {user.display_name}", inline= True)
@@ -494,7 +408,6 @@ async def userinfo(ctx, user:discord.Member=None):
     except:pass
     embed.set_footer(text= f"By: {str(ctx.author)}")
     await ctx.respond(embed= embed)
-
 
 @bot.slash_command(name="vanity", description="ｻｰﾊﾞｰのﾊﾞﾆﾃｨURLを表示")
 async def vanity(ctx):
@@ -556,7 +469,6 @@ async def serverinfo(ctx):
     except:
         embed.set_footer(text= f"By: {str(ctx.author)}")
         await ctx.respond(embed=embed)
-
 
 @bot.command(aliases=["sb"])
 async def serverbanner(ctx):
@@ -623,6 +535,7 @@ async def delete(ctx, channel:discord.TextChannel=None, meonly=None):
     await new_channel.edit(position=pos)
     if meonly:await ctx.respond(f"<#{new_channel.id}>", ephemeral=True)
     else :await ctx.respond(f"<#{new_channel.id}>")
+
 @bot.command(aliases=["incode"])
 async def invitecodeserver(ctx, url):
     if ctx.author.id == s.Dev:
@@ -705,10 +618,9 @@ async def xserver(ctx, id:str):
         embed.set_footer(text= f"By: {str(ctx.author)}")
         await ctx.respond(embed=embed)
 
-
 @bot.slash_command(name="source", description="スキッドしまくったこのBOTの雑魚ード貼ってます。")
 async def _source_code(ctx):
-    e = discord.Embed(description="PythonなのにClass使ってません:sob:",color=fav)
+    e = discord.Embed(description="PythonなのにClass使ってません:sob:",color=s.fav)
     b = Button(label="Jump to Github", url="https://github.com/Ennuilw/-/tree/main")
     view=View()
     view.add_item(b)
