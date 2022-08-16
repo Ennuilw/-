@@ -12,7 +12,8 @@ from numpy import linalg as LA
 import requests,cv2,io
 
 intents=discord.Intents.all()
-bot=commands.Bot(command_prefix="k.", intents=intents).remove_command("help")
+bot=commands.Bot(command_prefix="k.", intents=intents)
+bot.remove_command("help")
 sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id = s.spotify_client_id, client_secret = s.spotify_client_secret))
 Spotify_logo=[s.sp_logo_defa,s.sp_logo_wh]
 
@@ -35,11 +36,20 @@ async def SCRIPT_STOP(ctx):
 @bot.slash_command(name="spotifysearch", description="Spotify楽曲を検索・・・日本語だと検索エラーとか出る")
 async def search(ctx, *, keyword):
     result = sp.search(q=keyword, limit=5)
+    view = View()
+    i = 0
+    songs = []
     e = discord.Embed(description="<:_info:1007535167952392203> **見方**\n```曲名 [アルバム名] - アーティスト```",color=s.S_color).set_thumbnail(url=random.choice(Spotify_logo))
     for idx, track in enumerate(result['tracks']['items']):
-        e.add_field(name=f"{idx + 1} - Detales", value=f"```{track['name']} [{track['album']['name']}] - {track['artists'][0]['name']}\n```\
-            <:Icon_jumptourl:1007535375033581588> _{track['external_urls']['spotify']}_",inline=False)
-    await ctx.respond(embed=e)
+        #songs.append(track['external_urls']['spotify'])
+        e.add_field(name=f"{idx + 1} - Detales", value=f"```{track['name']} [{track['album']['name']}] - {track['artists'][0]['name']}```", inline=False)
+        i += 1
+        #if i > 4:b = Button(label=f"{(str(idx + 1))} - {track['name']}", url=track['external_urls']['spotify'], row=3)
+        #elif i >= 3:b = Button(label=f"{(str(idx + 1))} - {track['name']}", url=track['external_urls']['spotify'], row=2)
+        #else:b = Button(label=f"{(str(idx + 1))} - {track['name']}", url=track['external_urls']['spotify'])
+        b = Button(label=str(idx + 1), url = track['external_urls']['spotify'])
+        view.add_item(b)
+    await ctx.respond(embed=e, view=view)
 
 @bot.command()
 async def invites(ctx, id =None):
@@ -91,7 +101,6 @@ async def pic(ctx):
     #draw_random_stripe(color_arr, img_path)
     file = discord.File("./image/stripe_image.png", filename="stripe.png")
     await msg.edit(content="Done<a:VerifyMark_1:987128219658514484>",file=file)
-
 def show_tiled_main_color(color_arr):
     IMG_SIZE = 64
     MARGIN = 15
@@ -126,7 +135,7 @@ async def _ON_BOT(ctx):
 
 @bot.slash_command(name="タイプ別憤死")
 async def type_funshi(ctx):
-    text_funshi = """**典型的憤死パターン**<a:funshi:1004311411360546946>
+    text_funshi = """**典型的憤死パターン**<:emoji_15:1004313871705702441>
 _1.発狂型憤死_
 明らかに劣勢な状態になってから露骨に発作を起こしキチガイムーヴを始めるタイプ。
 ネタに走って有耶無耶にしようという意図が見え見えである。
@@ -158,7 +167,7 @@ async def word_list(ctx):
     view = View()
     view.add_item(b)
     b.disabled=True
-    await ctx.respond("""**典型的憤死ワード集**<a:funshi:1004311411360546946>
+    await ctx.respond("""**典型的憤死ワード集**<:emoji_15:1004313871705702441>
 ・荒らしで時間無駄にしてて草
 ・しょうもないことして楽しい？
 ・BANすればいいだけ 残念だったな
@@ -253,7 +262,7 @@ async def about(ctx):
     b = Button(label="Support Server", url="https://discord.gg/owen")
     b2 = Button(label="Invite URL", url=f"https://discord.com/oauth2/authorize?client_id=979001395703341096&permissions=1644971949559&scope=bot%20applications.commands")
     view = View()
-    view.add_item(b)
+    #view.add_item(b)
     view.add_item(b2)
     await ctx.respond(embed=embed, view=view)
 
@@ -342,9 +351,9 @@ async def spotify(ctx, user:discord.Member=None):
         view.add_item(jacket)
         await ctx.message.reply(embed=embed, view=view, mention_author=False)
 
-@bot.slash_command(name="invite", description="Botをメンションして招待URLを生成。 IDを入れるやつは馬鹿")
+@bot.slash_command(name="invite", description="メンテナンス中 | Botをメンションして招待URLを生成。 IDを入れるやつは馬鹿")
 async def invite(ctx, mention:discord.Member):
-    e=discord.Embed(description=f"{id.mention}(**{id.id}**)", color=s.fav)
+    e=discord.Embed(description=f"{id}(**{id.id}**)", color=s.fav)
     date_format="%Y/%m/%d %H:%M"
     e.add_field(name=f"アカウント作成日", value=f"**`{id.created_at.strftime(date_format)}`**")
     e.add_field(name="サーバー参加日", value= f"**`{id.joined_at.strftime(date_format)}`**")
@@ -369,7 +378,7 @@ async def gen(ctx, id:str):
     view.add_item(b)
     view.add_item(b_2)
     view.add_item(b_3)
-    await ctx.send("出来た", view=view)    
+    await ctx.respond("出来た", view=view)    
 
 @bot.slash_command(name="account", description="アカウントの作成・参加日時")
 async def account(ctx, user:discord.Member=None):
@@ -393,7 +402,7 @@ async def userinfo(ctx, user:discord.Member=None):
     elif s == "idle":s_icon = "🟠"
     elif s == "dnd":s_icon = "🔴"
     elif s == "offline":s_icon = "⚫"
-    embed= discord.Embed(title= f"{user}", description= f"**ID : `{user.id}`**", color=s.fav)
+    embed= discord.Embed(title= f"{user}", description= f"**ID : `{user.id}`**", color= 0x6dc1d1)
     embed.set_thumbnail(url=user.display_avatar)
     embed.add_field(name= "Name", value= f"> {user}", inline= True)
     embed.add_field(name= "Nickname", value= f"> {user.display_name}", inline= True)
@@ -448,7 +457,7 @@ async def serverinfo(ctx):
     except:embed.add_field(name=":link: Vanity URL", value=f"`None`")        
     embed.add_field(name= ":grinning: Emoji", value= f"Emojis: **{len(emojis)}**\nStickers: **{len(stickers)}**")
     embed.add_field(name= f":busts_in_silhouette: Members [{guild.member_count}]", 
-            value= f"User: **{str(sum(1 for member in guild.members if not member.bot))}** |  Bot: **{str(sum(1 for member in guild.members if member.bot))}**\nOnline: **{len(online)}**")
+            value= f"User: **{str(sum(1 for member in guild.members if not member.bot))}**\nBot: **{str(sum(1 for member in guild.members if member.bot))}**\nOnline: **{len(online)}**")
     embed.add_field(name= f":speech_left: Channels [{tchannels+vchannels}]", 
             value= f"Text: **{tchannels}**\nVoice: **{vchannels}**\nCategory: **{len(guild.categories)}**",inline= True)
     try:
@@ -536,43 +545,6 @@ async def delete(ctx, channel:discord.TextChannel=None, meonly=None):
     if meonly:await ctx.respond(f"<#{new_channel.id}>", ephemeral=True)
     else :await ctx.respond(f"<#{new_channel.id}>")
 
-@bot.command(aliases=["incode"])
-async def invitecodeserver(ctx, url):
-    if ctx.author.id == s.Dev:
-        async with ctx.channel.typing():
-            guild = await bot.fetch_invite(url = f"https://discord.gg/{url}")
-            date_f= "%Y/%m/%d"
-            tchannels= len(guild.text_channels)
-            vchannels= len(guild.voice_channels)
-            roles= [role for role in guild.roles]
-            emojis= [emoji for emoji in guild.emojis]
-            online= [1 for user in guild.members if user.status != discord.Status.offline]
-            stickers = [sticker  for sticker in guild.stickers]
-            embed= discord.Embed(title=f"{guild.name}", description= f":crown: **Owner : **{guild.owner.mention}\n:id: **Server id : `{guild.id}`**", color= 0x6dc1d1)
-            try:embed.set_thumbnail(url= guild.icon.url)
-            except:pass
-            embed.add_field(name= ":shield: Role", value= f"Roles: **{len(roles)}**", inline= True)
-            embed.add_field(name= ":grinning: Emoji", value= f"Emojis: **{len(emojis)}**\nStickers: **{len(stickers)}**")
-            embed.add_field(name= f":gem: Boost [{guild.premium_subscription_count}]", value= f"Tier: ** {guild.premium_tier}**")
-            embed.add_field(name= ":calendar_spiral: Createion", value= f"**`{guild.created_at.strftime(date_f)}`**", inline=True)
-            embed.add_field(name= f":busts_in_silhouette: Members [{guild.member_count}]", 
-                    value= f"User: **{str(sum(1 for member in guild.members if not member.bot))}** |  Bot: **{str(sum(1 for member in guild.members if member.bot))}**\nOnline: **{len(online)}**")
-            embed.add_field(name= f":speech_left: Channels [{tchannels+vchannels}]", 
-                    value= f"Text: **{tchannels}** | Voice: **{vchannels}**\nCategory: **{len(guild.categories)}**",inline= True)
-            try:
-                vanity =  await guild.vanity_invite()
-                embed.add_field(name=":link: Vanity URL", value=f"`{str(vanity).replace('https://', '')}`")
-            except:embed.add_field(name=":link: Vanity URL", value=f"`None`")        
-            try:
-                req= await bot.http.request(discord.http.Route("GET", "/guilds/{sid}", sid= guild.id))
-                banner_id= req["banner"]
-                if banner_id:
-                    banner_url= f"https://cdn.discordapp.com/banners/{guild.id}/{banner_id}.png?size=1024"
-                    embed.set_image(url= banner_url)
-                    embed.set_footer(text= f"By: {str(ctx.author)} | Banner is png file")
-            except:embed.set_footer(text= f"By: {str(ctx.author)}")
-            await ctx.send(embed= embed)
-
 @bot.slash_command(name="xserver", description="server idを入れてね!このボットが入ってるサーバーの情報を取得")
 async def xserver(ctx, id:str):
     guild = bot.get_guild(int(id))
@@ -596,7 +568,7 @@ async def xserver(ctx, id:str):
     except:embed.add_field(name=":link: Vanity URL", value=f"`None`")        
     embed.add_field(name= ":grinning: Emoji", value= f"Emojis: **{len(emojis)}**\nStickers: **{len(stickers)}**")
     embed.add_field(name= f":busts_in_silhouette: Members [{guild.member_count}]", 
-            value= f"User: **{str(sum(1 for member in guild.members if not member.bot))}** |  Bot: **{str(sum(1 for member in guild.members if member.bot))}**\nOnline: **{len(online)}**")
+            value= f"User: **{str(sum(1 for member in guild.members if not member.bot))}**\nBot: **{str(sum(1 for member in guild.members if member.bot))}**\nOnline: **{len(online)}**")
     embed.add_field(name= f":speech_left: Channels [{tchannels+vchannels}]", 
             value= f"Text: **{tchannels}**\nVoice: **{vchannels}**\nCategory: **{len(guild.categories)}**",inline= True)
     try:
@@ -620,7 +592,7 @@ async def xserver(ctx, id:str):
 
 @bot.slash_command(name="source", description="スキッドしまくったこのBOTの雑魚ード貼ってます。")
 async def _source_code(ctx):
-    e = discord.Embed(description="PythonなのにClass使ってません:sob:",color=s.fav)
+    e = discord.Embed(description="PythonなのにClass使ってません:sob:",color=0x6dc1c1)
     b = Button(label="Jump to Github", url="https://github.com/Ennuilw/-/tree/main")
     view=View()
     view.add_item(b)
