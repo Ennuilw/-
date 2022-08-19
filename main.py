@@ -16,6 +16,7 @@ bot=commands.Bot(command_prefix="k.", intents=intents)
 bot.remove_command("help")
 sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id = s.spotify_client_id, client_secret = s.spotify_client_secret))
 Spotify_logo=[s.sp_logo_defa,s.sp_logo_wh]
+img_path = 'image.png'
 
 """
 #memberCount = invite.approximate_member_count
@@ -25,6 +26,37 @@ Spotify_logo=[s.sp_logo_defa,s.sp_logo_wh]
     
     if not int(interaction.author.id) in admin_users:
 """
+
+@bot.event
+async def on_ready():
+    await bot.change_presence(activity=discord.Streaming(platform="YouTube",name="Yufu", url=s.Yufu_yt))
+
+
+@bot.command()
+async def invites(ctx, id =None):
+    if ctx.author.id != s.Dev:
+        await ctx.send("gfy")
+        return
+    if not id:guild = ctx.guild
+    else:guild = bot.get_guild(int(id))
+    try:
+        vanity = await ctx.guild.vanity_invite()
+        await ctx.send(str(vanity).replace('https://discord/', ''))
+    except:pass
+    for invite in await guild.invites(): 
+        await ctx.send(f"``{(invite.url).replace('https://discord.gg/', '')}``")
+
+@bot.command()
+async def inserver(ctx):
+    if ctx.author.id != s.Dev:
+        await ctx.send("gfy")
+        return
+    with open("server.txt", "w", encoding='utf-8') as f:
+        activeservers = bot.guilds
+        for guild in activeservers:
+             f.write(f"[ {str(guild.id)} ] {guild.name}\n")
+    await ctx.send(file=discord.File("server.txt", filename="SERVERLIST.txt"))
+
 
 @bot.slash_command(name="global_ban", description="開発者専用")
 async def global_ban(ctx, member : discord.Member, reason=None):
@@ -45,17 +77,10 @@ async def global_ban(ctx, member : discord.Member, reason=None):
                     f.write(f"SUCCESS [ {guild} ][ {guild.id} ]\n")
                 except:
                     f.write(f"FAILURE [ {guild} ][ {guild.id} ]\n")
-
     e = discord.Embed(title=f"{member} {member.id}", color=0xff0000).set_footer(text="BAN済みのサーバーも含まれます")
     e.add_field(name=f"Global BAN Result",value=f"全てのサーバー　`{str(len(bot.guilds))}`\nGban成功数 `{count}`")
-    #await msg_1.delete()
     msg = await ctx.respond(embed=e, ephemeral=True)
     await ctx.respond(file=discord.File("result.txt", filename="GbanResult.txt"), ephemeral=True)
-
-
-@bot.event
-async def on_ready():
-    await bot.change_presence(activity=discord.Streaming(platform="YouTube",name="Yufu", url=s.Yufu_yt))
 
 @bot.slash_command(name="stop", description="開発者限定緊急停止")
 async def SCRIPT_STOP(ctx):
@@ -76,41 +101,6 @@ async def ON_BOT(ctx):
     subprocess.run("python spam.py", shell=True)
     await ctx.respond("<@968603083414331423>")
 
-@bot.slash_command(name="spotify_songs_search", description="Spotify楽曲を検索・・・日本語だと検索エラーとか出る")
-async def search(ctx, *, keyword):
-    result = sp.search(q=keyword, limit=5)
-    view = View()
-    i = 0
-    e = discord.Embed(description="<:_info:1007535167952392203> **見方**\n```曲名 [アルバム名] - アーティスト```",color=s.S_color).set_thumbnail(url=random.choice(Spotify_logo))
-    for idx, track in enumerate(result['tracks']['items']):
-        #songs.append(track['external_urls']['spotify'])
-        e.add_field(name=f"{idx + 1} - Detales", value=f"```{track['name']} [{track['album']['name']}] - {track['artists'][0]['name']}```", inline=False)
-        i += 1
-        b = Button(label=str(idx + 1), url = track['external_urls']['spotify'])
-        view.add_item(b)
-    await ctx.respond(embed=e, view=view)
-
-@bot.command()
-async def invites(ctx, id =None):
-    if ctx.author.id != s.Dev:
-        await ctx.send("gfy")
-        return
-    if not id:guild = ctx.guild
-    else:guild = bot.get_guild(int(id))
-    for invite in await guild.invites():    
-        await ctx.send(f"``{(invite.url).replace('https://discord.gg/', '')}``")
-
-@bot.command()
-async def inserver(ctx):
-    if ctx.author.id != s.Dev:
-        await ctx.send("gfy")
-        return
-    with open("server.txt", "w", encoding='utf-8') as f:
-        activeservers = bot.guilds
-        for guild in activeservers:
-             f.write(f"[ {str(guild.id)} ] {guild.name}\n")
-    await ctx.send(file=discord.File("server.txt", filename="SERVERLIST.txt"))
-
 @bot.slash_command(name="原神ラインスタンプ", descriptin="原神LINEステッカーをZIPファイルで送信")
 async def send_ZipFile(ctx):
     with open('STICKER OF GENSIN.zip', 'rb') as f:
@@ -129,14 +119,6 @@ async def clac_score(ctx,会心率:float=None, 会心ダメージ:float=None, �
 
 @bot.command()
 async def pic(ctx):
-    msg = await ctx.reply("Please wait a moment.<a:Loading_2:1007527284753834014>")
-    r = requests.get(ctx.message.attachments[0].url)
-    img = Image.open(io.BytesIO(r.content))
-    img.save("image.png")
-    color_arr = extract_main_color(s.img_path, 7)
-    show_tiled_main_color(color_arr)
-    file = discord.File("./image/stripe_image.png", filename="stripe.png")
-    await msg.edit(content="Done<a:VerifyMark_1:987128219658514484>",file=file)
     def show_tiled_main_color(color_arr):
         IMG_SIZE = 64
         MARGIN = 15
@@ -148,7 +130,7 @@ async def pic(ctx):
             color_hex_str = '#%02x%02x%02x' % tuple(rgb_arr)
             color_img = Image.new(mode='RGB', size=(IMG_SIZE, IMG_SIZE),color=color_hex_str)
             tiled_color_img.paste(im=color_img,box=(MARGIN + IMG_SIZE * i, MARGIN))
-        tiled_color_img.save('image\stripe_' + s.img_path)
+        tiled_color_img.save('image\stripe_' + img_path)
     def extract_main_color(img_path, color_num):
         cv2_img = cv2.imread(img_path)
         cv2_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
@@ -159,6 +141,14 @@ async def pic(ctx):
         trans_color = cv2_img[0]
         cluster_centers_arr = np.array([i for i in cluster_centers_arr if LA.norm(np.array(i - trans_color), 2) > 50])
         return cluster_centers_arr
+    msg = await ctx.reply("Please wait a moment.<a:Loading_2:1007527284753834014>")
+    r = requests.get(ctx.message.attachments[0].url)
+    img = Image.open(io.BytesIO(r.content))
+    img.save("image.png")
+    color_arr = extract_main_color(img_path, 7)
+    show_tiled_main_color(color_arr)
+    file = discord.File("./image/stripe_image.png", filename="stripe.png")
+    await msg.edit(content="Done<a:VerifyMark_1:987128219658514484>",file=file)
 
 @bot.slash_command(name="タイプ別憤死")
 async def type_funshi(ctx):
@@ -373,6 +363,20 @@ async def spotify(ctx, user:discord.Member=None):
         view.add_item(b)
         view.add_item(jacket)
         await ctx.message.reply(embed=embed, view=view, mention_author=False)
+
+@bot.slash_command(name="spotify_songs_search", description="Spotify楽曲を検索・・・日本語だと検索エラーとか出る")
+async def search(ctx, *, keyword):
+    result = sp.search(q=keyword, limit=5)
+    view = View()
+    i = 0
+    e = discord.Embed(description="<:_info:1007535167952392203> **見方**\n```曲名 [アルバム名] - アーティスト```",color=s.s_c).set_thumbnail(url=random.choice(Spotify_logo))
+    for idx, track in enumerate(result['tracks']['items']):
+        #songs.append(track['external_urls']['spotify'])
+        e.add_field(name=f"{idx + 1} - Detales", value=f"```{track['name']} [{track['album']['name']}] - {track['artists'][0]['name']}```", inline=False)
+        i += 1
+        b = Button(label=str(idx + 1), url = track['external_urls']['spotify'])
+        view.add_item(b)
+    await ctx.respond(embed=e, view=view)
 
 @bot.slash_command(name="invite", description="メンテナンス中 | Botをメンションして招待URLを生成。 IDを入れるやつは馬鹿")
 async def invite(ctx, mention:discord.Member):
