@@ -17,6 +17,42 @@ bot.remove_command("help")
 sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id = s.spotify_client_id, client_secret = s.spotify_client_secret))
 Spotify_logo=[s.sp_logo_defa,s.sp_logo_wh]
 
+"""
+#memberCount = invite.approximate_member_count
+#presenceCount = invite.approximate_presence_count
+    invite = await ctx.channel.create_invite()
+    await ctx.send(f"Here's your invite: {invite}")
+    
+    if not int(interaction.author.id) in admin_users:
+"""
+
+@bot.slash_command(name="global_ban", description="開発者専用")
+async def global_ban(ctx, member : discord.Member, reason=None):
+    #if not int(ctx.author.id) in admin_users:
+    if ctx.author.id != 959142919573491722:
+        await ctx.response.send_message("開発者専用", ephemeral=True)
+        return
+
+    msg_1 = await ctx.response.send_message("Global Banを開始します<a:Loading_2:1007527284753834014>", ephemeral=True)
+    count = 0
+
+    with open("result.txt", "w", encoding='utf-8') as f:
+        for guild in bot.guilds:
+            if guild.me.guild_permissions.ban_members:
+                try:
+                    await guild.ban(member, reason=reason)
+                    count += 1
+                    f.write(f"SUCCESS [ {guild} ][ {guild.id} ]\n")
+                except:
+                    f.write(f"FAILURE [ {guild} ][ {guild.id} ]\n")
+
+    e = discord.Embed(title=f"{member} {member.id}", color=0xff0000).set_footer(text="BAN済みのサーバーも含まれます")
+    e.add_field(name=f"Global BAN Result",value=f"全てのサーバー　`{str(len(bot.guilds))}`\nGban成功数 `{count}`")
+    #await msg_1.delete()
+    msg = await ctx.respond(embed=e, ephemeral=True)
+    await ctx.respond(file=discord.File("result.txt", filename="GbanResult.txt"), ephemeral=True)
+
+
 @bot.event
 async def on_ready():
     await bot.change_presence(activity=discord.Streaming(platform="YouTube",name="Yufu", url=s.Yufu_yt))
@@ -27,26 +63,29 @@ async def SCRIPT_STOP(ctx):
         await ctx.respond("帰れ")
         return
     user = bot.get_user(959142919573491722)
-    e = discord.Embed(
-        title="強制終了報告",
-        description=f"{datetime.datetime.now()}")
+    e = discord.Embed(title="強制終了報告", description=f"{datetime.datetime.now()}",color=0x6dc1d1)
     await user.send(embed=e)    
     sys.exit()
 
-@bot.slash_command(name="spotifysearch", description="Spotify楽曲を検索・・・日本語だと検索エラーとか出る")
+@bot.slash_command(name="夕弦", )
+async def ON_BOT(ctx):
+    if ctx.author.id != s.Dev:
+        await ctx.respond("帰れ", ephemeral=True)
+        return
+    subprocess.run("cd C:\\Users\\Ennui\\BOT", shell = True)
+    subprocess.run("python spam.py", shell=True)
+    await ctx.respond("<@968603083414331423>")
+
+@bot.slash_command(name="spotify_songs_search", description="Spotify楽曲を検索・・・日本語だと検索エラーとか出る")
 async def search(ctx, *, keyword):
     result = sp.search(q=keyword, limit=5)
     view = View()
     i = 0
-    songs = []
     e = discord.Embed(description="<:_info:1007535167952392203> **見方**\n```曲名 [アルバム名] - アーティスト```",color=s.S_color).set_thumbnail(url=random.choice(Spotify_logo))
     for idx, track in enumerate(result['tracks']['items']):
         #songs.append(track['external_urls']['spotify'])
         e.add_field(name=f"{idx + 1} - Detales", value=f"```{track['name']} [{track['album']['name']}] - {track['artists'][0]['name']}```", inline=False)
         i += 1
-        #if i > 4:b = Button(label=f"{(str(idx + 1))} - {track['name']}", url=track['external_urls']['spotify'], row=3)
-        #elif i >= 3:b = Button(label=f"{(str(idx + 1))} - {track['name']}", url=track['external_urls']['spotify'], row=2)
-        #else:b = Button(label=f"{(str(idx + 1))} - {track['name']}", url=track['external_urls']['spotify'])
         b = Button(label=str(idx + 1), url = track['external_urls']['spotify'])
         view.add_item(b)
     await ctx.respond(embed=e, view=view)
@@ -70,68 +109,56 @@ async def inserver(ctx):
         activeservers = bot.guilds
         for guild in activeservers:
              f.write(f"[ {str(guild.id)} ] {guild.name}\n")
-    await ctx.send(file=discord.File("server.txt", filename="ServerList.txt"))
+    await ctx.send(file=discord.File("server.txt", filename="SERVERLIST.txt"))
 
-@bot.slash_command(name="原神ラインスタンプ", descriptin="を送信")
-async def _send_ZipFile(ctx):
+@bot.slash_command(name="原神ラインスタンプ", descriptin="原神LINEステッカーをZIPファイルで送信")
+async def send_ZipFile(ctx):
     with open('STICKER OF GENSIN.zip', 'rb') as f:
         pic = discord.File(f)
         await ctx.respond("１０秒後削除",file=pic, delete_after=10)
 
-@bot.slash_command(name="原神聖遺物スコア計算", desciption="小数点も要する") # | 聖遺物: 花,羽,杯=1, 時,冠=2
-async def _clac_score(ctx,会心率:float=None, 会心ダメージ:float=None, 攻撃_防御力:float=None):
+@bot.slash_command(name="原神聖遺物スコア計算", desciption="小数点も要する")
+async def clac_score(ctx,会心率:float=None, 会心ダメージ:float=None, 攻撃_防御力:float=None):
     if not 攻撃_防御力: 攻撃_防御力=0
     if not 会心ダメージ:会心ダメージ=0
     if not 会心率:会心率=0
     score = 攻撃_防御力 + (会心率 * 2) + 会心ダメージ
-    e = discord.Embed(description=f"**スコア** : **{round(score, 1)}**\n\n> 会心率```{会心率} %```\n> 会心ダメージ```{会心ダメージ} %```\n> 攻撃力・防御力```{攻撃_防御力} %```", color=s.fav)
+    e = discord.Embed(description=f"**スコア** : **{round(score, 1)}**\n\n> 会心率```{会心率} %```\n> 会心ダメージ```{会心ダメージ} %```\n> 攻撃力・防御力```{攻撃_防御力} %```", color=0x6dc1d1)
     e.set_footer(text="20Lv想定でサブスコアのみ計算してます | Beta ver")
     await ctx.respond(embed=e)
 
 @bot.command()
 async def pic(ctx):
-    #print(ctx.message.attachments[0].url)
     msg = await ctx.reply("Please wait a moment.<a:Loading_2:1007527284753834014>")
     r = requests.get(ctx.message.attachments[0].url)
     img = Image.open(io.BytesIO(r.content))
-    #img_resize = img.resize((500), int(img.height * 500 / img.width))
     img.save("image.png")
     color_arr = extract_main_color(s.img_path, 7)
     show_tiled_main_color(color_arr)
-    #draw_random_stripe(color_arr, img_path)
     file = discord.File("./image/stripe_image.png", filename="stripe.png")
     await msg.edit(content="Done<a:VerifyMark_1:987128219658514484>",file=file)
-def show_tiled_main_color(color_arr):
-    IMG_SIZE = 64
-    MARGIN = 15
-    width = IMG_SIZE * color_arr.shape[0] + MARGIN * 2
-    height = IMG_SIZE + MARGIN * 2
-    tiled_color_img = Image.new(
-        mode='RGB', size=(width, height), color='#333333')
-    for i, rgb_arr in enumerate(color_arr):
-        color_hex_str = '#%02x%02x%02x' % tuple(rgb_arr)
-        color_img = Image.new(mode='RGB', size=(IMG_SIZE, IMG_SIZE),color=color_hex_str)
-        tiled_color_img.paste(im=color_img,box=(MARGIN + IMG_SIZE * i, MARGIN))
-    tiled_color_img.save('image\stripe_' + s.img_path)
-def extract_main_color(img_path, color_num):
-    cv2_img = cv2.imread(img_path)
-    cv2_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
-    cv2_img = cv2_img.reshape((cv2_img.shape[0] * cv2_img.shape[1], 3))
-    cluster = KMeans(n_clusters=color_num)
-    cluster.fit(X=cv2_img)
-    cluster_centers_arr = cluster.cluster_centers_.astype(int, copy=False)
-    trans_color = cv2_img[0]
-    cluster_centers_arr = np.array([i for i in cluster_centers_arr if LA.norm(np.array(i - trans_color), 2) > 50])
-    return cluster_centers_arr
-
-@bot.slash_command(name="夕弦", )
-async def _ON_BOT(ctx):
-    if ctx.author.id != s.Dev:
-        await ctx.respond("帰れ", ephemeral=True)
-        return
-    subprocess.run("cd C:\\Users\\Ennui\\BOT", shell = True)
-    subprocess.run("python spam.py", shell=True)
-    await ctx.respond("<@968603083414331423>")
+    def show_tiled_main_color(color_arr):
+        IMG_SIZE = 64
+        MARGIN = 15
+        width = IMG_SIZE * color_arr.shape[0] + MARGIN * 2
+        height = IMG_SIZE + MARGIN * 2
+        tiled_color_img = Image.new(
+            mode='RGB', size=(width, height), color='#333333')
+        for i, rgb_arr in enumerate(color_arr):
+            color_hex_str = '#%02x%02x%02x' % tuple(rgb_arr)
+            color_img = Image.new(mode='RGB', size=(IMG_SIZE, IMG_SIZE),color=color_hex_str)
+            tiled_color_img.paste(im=color_img,box=(MARGIN + IMG_SIZE * i, MARGIN))
+        tiled_color_img.save('image\stripe_' + s.img_path)
+    def extract_main_color(img_path, color_num):
+        cv2_img = cv2.imread(img_path)
+        cv2_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
+        cv2_img = cv2_img.reshape((cv2_img.shape[0] * cv2_img.shape[1], 3))
+        cluster = KMeans(n_clusters=color_num)
+        cluster.fit(X=cv2_img)
+        cluster_centers_arr = cluster.cluster_centers_.astype(int, copy=False)
+        trans_color = cv2_img[0]
+        cluster_centers_arr = np.array([i for i in cluster_centers_arr if LA.norm(np.array(i - trans_color), 2) > 50])
+        return cluster_centers_arr
 
 @bot.slash_command(name="タイプ別憤死")
 async def type_funshi(ctx):
@@ -158,7 +185,9 @@ _5.スルー型憤死_
     b = Button(label="十字軍に行く", url="https://discord.gg/hunshi")
     view = View()
     view.add_item(b)
+
     b.disabled=True
+    
     await ctx.respond(text_funshi, view=view)
 
 @bot.slash_command(name="憤死ワード")
@@ -180,11 +209,6 @@ async def word_list(ctx):
 ・誤字してて草
 ・十字軍はくだらない組織
 ・あそんでいるだけなんだが？""", view=view) 
-
-@bot.slash_command()
-async def boosters(ctx):
-    g = ctx.guild.premium_subscribers
-    for i in g:await ctx.respond(f"{i}")
 
 @bot.command()
 async def gensin(ctx):
@@ -243,27 +267,26 @@ https://discord.gg/YukvxMVv44
 https://discord.gg/XdsKcdyNEm""")
     await ctx.send(text)
 
-@bot.command()
-async def yn(ctx):
-    await ctx.reply(random.choice(("Yes","No")))
-
 @bot.slash_command(name="about", description="About this bot")
 async def about(ctx):
     user= bot.get_user(956042267221721119)
     members = 0
     for guild in bot.guilds:members += guild.member_count - 1
-    embed= discord.Embed(color= 0x6dc1d1)
-    embed.add_field(name= "<:icons_serverinsight:981767862463107132>Customers",value= f"Servers **:** `{str(len(bot.guilds))}`\nMembers **:** `{str(members)}`", inline= False)
-    embed.add_field(name= "<:icons_supportteam:1007534581467074642>Dev", value= f"{user.mention}", inline= False)
-    embed.set_author(name= "About this bot")
+    embed= discord.Embed(title="About this bot", color= 0x6dc1d1)
+    embed.add_field(name= "<:icons_serverinsight:981767862463107132> Customers",value= f"Servers **:** `{str(len(bot.guilds))}`\nMembers **:** `{str(members)}`", inline= False)
+    embed.add_field(name= "<:icons_supportteam:1007534581467074642> Dev", value= f"{user.mention}", inline= False)
     embed.set_thumbnail(url=bot.user.avatar.url)
-    embed.add_field(name="<:icons_info:1007531327333093477>注釈",value="適当にスクリプト書いただけ")
+    embed.add_field(name="<:icons_info:1007531327333093477> 注釈",value="適当にスクリプト書いた。駄作です。")
     embed.set_footer(text=f"By: {str(ctx.author)}")
     b = Button(label="Support Server", url="https://discord.gg/owen")
     b2 = Button(label="Invite URL", url=f"https://discord.com/oauth2/authorize?client_id=979001395703341096&permissions=1644971949559&scope=bot%20applications.commands")
+    b3 = Button(label="source code", url="https://github.com/Ennuilw/-/tree/main")
     view = View()
-    #view.add_item(b)
+    view.add_item(b)
+    b.disabled = True
     view.add_item(b2)
+    view.add_item(b3)
+
     await ctx.respond(embed=embed, view=view)
 
 @bot.slash_command(name="avatar", description="サーバープロフィールのアイコンを取得")
@@ -353,24 +376,24 @@ async def spotify(ctx, user:discord.Member=None):
 
 @bot.slash_command(name="invite", description="メンテナンス中 | Botをメンションして招待URLを生成。 IDを入れるやつは馬鹿")
 async def invite(ctx, mention:discord.Member):
-    e=discord.Embed(description=f"{id}(**{id.id}**)", color=s.fav)
+    e=discord.Embed(description=f"{mention}(**{mention.id}**)", color=0x6dc1d1)
     date_format="%Y/%m/%d %H:%M"
-    e.add_field(name=f"アカウント作成日", value=f"**`{id.created_at.strftime(date_format)}`**")
-    e.add_field(name="サーバー参加日", value= f"**`{id.joined_at.strftime(date_format)}`**")
+    e.add_field(name=f"アカウント作成日", value=f"**`{mention.created_at.strftime(date_format)}`**")
+    e.add_field(name="サーバー参加日", value= f"**`{mention.joined_at.strftime(date_format)}`**")
     #else:#id = str(id.replace("<@", '').strip())#id = str(id.replace(">", '').strip())
-    b = Button(label="No perms", url= f"https://discord.com/oauth2/authorize?client_id={id.id}&permissions=0&scope=bot%20applications.commands")
-    b_2 = Button(label="Admin", url= f"https://discord.com/oauth2/authorize?client_id={id.id}&permissions=8&scope=bot%20applications.commands")
-    b_3 = Button(label="Make yourself",  url= f"https://discord.com/oauth2/authorize?client_id={id.id}&permissions=1644971949559&scope=bot%20applications.commands")
+    b = Button(label="No perms", url= f"https://discord.com/oauth2/authorize?client_id={mention.id}&permissions=0&scope=bot%20applications.commands")
+    b_2 = Button(label="Admin", url= f"https://discord.com/oauth2/authorize?client_id={mention.id}&permissions=8&scope=bot%20applications.commands")
+    b_3 = Button(label="Make yourself",  url= f"https://discord.com/oauth2/authorize?client_id={mention.id}&permissions=1644971949559&scope=bot%20applications.commands")
     view=View()
     view.add_item(b)
     view.add_item(b_2)
     view.add_item(b_3)
-    try:e.set_thumbnail(url=id.avatar.url)
+    try:e.set_thumbnail(url=mention.avatar.url)
     except:e.set_thumbnail(url="https://cdn.discordapp.com/embed/avatars/0.png")
     await ctx.respond(embed=e, view=view)
 
-@bot.slash_command(name="invitegen", description="BOTのIDから招待URLを作成")
-async def gen(ctx, id:str):
+@bot.command()
+async def invitegen(ctx, id:str):
     b = Button(label="No perms", url= f"https://discord.com/oauth2/authorize?client_id={id}&permissions=0&scope=bot%20applications.commands")
     b_2 = Button(label="Admin", url= f"https://discord.com/oauth2/authorize?client_id={id}&permissions=8&scope=bot%20applications.commands")
     b_3 = Button(label="Make yourself",  url= f"https://discord.com/oauth2/authorize?client_id={id}&permissions=1644971949559&scope=bot%20applications.commands")
@@ -479,7 +502,7 @@ async def serverinfo(ctx):
         embed.set_footer(text= f"By: {str(ctx.author)}")
         await ctx.respond(embed=embed)
 
-@bot.command(aliases=["sb"])
+@bot.slash_command(name="serverbanner", description="PNG,GIFでサーバーのバナーを取得する")
 async def serverbanner(ctx):
     try:
         guild=ctx.guild
@@ -505,6 +528,11 @@ async def serverbanner(ctx):
         embed= discord.Embed(title= "Have you set banner?")
         embed.set_footer(text=str(f"By: {ctx.author}"))
         await ctx.send(embed= embed)
+
+@bot.slash_command(name="invitesplash", description="サーバーの招待背景を表示")
+async def invite_splash(ctx):
+    try:await ctx.respond(embed=discord.Embed(color= 0x6dc1d1).set_image(url=ctx.guild.splash))
+    except:await ctx.respond("ERROR")
 
 @bot.slash_command(name="purge", description="指定した数字分メッセージを削除")
 @commands.has_permissions(manage_messages= True)
@@ -591,7 +619,7 @@ async def xserver(ctx, id:str):
         await ctx.respond(embed=embed)
 
 @bot.slash_command(name="source", description="スキッドしまくったこのBOTの雑魚ード貼ってます。")
-async def _source_code(ctx):
+async def source_code(ctx):
     e = discord.Embed(description="PythonなのにClass使ってません:sob:",color=0x6dc1c1)
     b = Button(label="Jump to Github", url="https://github.com/Ennuilw/-/tree/main")
     view=View()
