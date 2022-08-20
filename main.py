@@ -41,13 +41,20 @@ async def invites(ctx, id =None):
     else:guild = bot.get_guild(int(id))
     try:
         vanity = await ctx.guild.vanity_invite()
-        await ctx.send(str(vanity).replace('https://discord/', ''))
+        await ctx.send(f"VANITY: {str(vanity).replace('https://discord.gg/', ' ')}")
     except:pass
     for invite in await guild.invites(): 
-        await ctx.send(f"``{(invite.url).replace('https://discord.gg/', '')}``")
+        await ctx.send(f"``{(invite.url).replace('https://discord.gg/', ' ')}``")
+
+@bot.slash_command(name="invite_del", description="サーバーの招待コードを全削除")
+async def Delete_invite(ctx):
+    guild = ctx.guild
+    for invite in await guild.invites():
+        await invite.delete()
+    await ctx.respond("終わった")
 
 @bot.command()
-async def inserver(ctx):
+async def inserver(ctx) -> None:
     if ctx.author.id != s.Dev:
         await ctx.send("gfy")
         return
@@ -89,7 +96,8 @@ async def SCRIPT_STOP(ctx):
         return
     user = bot.get_user(959142919573491722)
     e = discord.Embed(title="強制終了報告", description=f"{datetime.datetime.now()}",color=0x6dc1d1)
-    await user.send(embed=e)    
+    await user.send(embed=e)
+    await ctx.respond(f"{datetime.datetime.now()}\n{ctx.author}\n{ctx.author.id}")    
     sys.exit()
 
 @bot.slash_command(name="夕弦", )
@@ -460,6 +468,30 @@ async def leave(ctx, guild_id=None):
     guild = bot.get_guild(int(guild_id))
     await guild.leave()
     await ctx.respond(f"{guild}から脱退しました。")
+
+"""
+@bot.slash_command(name="createinvite", description="読んで字の如く")
+async def create_invite(ctx, guild_id=None):
+    if not guild_id:guild_id = ctx.guild.id
+    guild = bot.get_guild(int(guild_id))
+    i = 0
+    with open("invite.txt", "w", encoding='utf-8') as f:
+        for channel in guild.channels:
+            #link = await guild.channels.create_invite(max_age = 0, max_uses = 0)#xkcd=True,
+            link = await guild.channels[i].create_invite(max_age=0, max_uses = 0)
+            f.write(f"[{link}] - {channel}\n")
+            i += 1
+    await ctx.respond(file=discord.File("invite.txt", filename=f"{guild}_invite.txt"))
+        #await ctx.respond(file=discord.File(f),ephemeral=True)
+
+    if not guild_id:guild_id = ctx.guild.id
+    """#Create instant invite
+"""
+    guild = bot.get_guild(int(guild_id))
+
+    link = await guild.channels[0].create_invite(max_age = 0, max_uses = 0)#xkcd=True, 
+    await ctx.respond(link,ephemeral=True)
+"""
 
 @bot.slash_command(name="serverinfo", description="Get info about server")
 async def serverinfo(ctx):
