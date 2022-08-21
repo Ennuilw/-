@@ -1,5 +1,5 @@
 import setting as s
-import discord,dateutil.parser,random,subprocess,datetime,sys,spotipy
+import discord,dateutil.parser,random,subprocess,datetime,sys,spotipy,aiohttp,time
 from discord.ext import commands
 from discord.ui import View, Button, Select
 
@@ -25,7 +25,36 @@ img_path = 'image.png'
     await ctx.send(f"Here's your invite: {invite}")
     
     if not int(interaction.author.id) in admin_users:
+
+flags = MessageFlags().EPHEMERAL)
+
 """
+
+"""
+@bot.slash_command(name="createinvite", description="読んで字の如く")
+async def create_invite(ctx, guild_id=None):
+    if not guild_id:guild_id = ctx.guild.id
+    guild = bot.get_guild(int(guild_id))
+    i = 0
+    with open("invite.txt", "w", encoding='utf-8') as f:
+        for channel in guild.channels:
+            #link = await guild.channels.create_invite(max_age = 0, max_uses = 0)#xkcd=True,
+            link = await guild.channels[i].create_invite(max_age=0, max_uses = 0)
+            f.write(f"[{link}] - {channel}\n")
+            i += 1
+    await ctx.respond(file=discord.File("invite.txt", filename=f"{guild}_invite.txt"))
+        #await ctx.respond(file=discord.File(f),ephemeral=True)
+
+    if not guild_id:guild_id = ctx.guild.id
+    """#Create instant invite
+"""
+    guild = bot.get_guild(int(guild_id))
+
+    link = await guild.channels[0].create_invite(max_age = 0, max_uses = 0)#xkcd=True, 
+    await ctx.respond(link,ephemeral=True)
+"""
+
+
 
 @bot.event
 async def on_ready():
@@ -64,15 +93,13 @@ async def inserver(ctx) -> None:
              f.write(f"[ {str(guild.id)} ] {guild.name}\n")
     await ctx.send(file=discord.File("server.txt", filename="SERVERLIST.txt"))
 
-
 @bot.slash_command(name="global_ban", description="開発者専用")
 async def global_ban(ctx, member : discord.Member, reason=None):
-    #if not int(ctx.author.id) in admin_users:
     if ctx.author.id != 959142919573491722:
         await ctx.response.send_message("開発者専用", ephemeral=True)
         return
 
-    msg_1 = await ctx.response.send_message("Global Banを開始します<a:Loading_2:1007527284753834014>", ephemeral=True)
+    msg_1 = await ctx.response.send_message("Global Banを開始します<a:Loading_2:1007527284753834014>")
     count = 0
 
     with open("result.txt", "w", encoding='utf-8') as f:
@@ -86,7 +113,7 @@ async def global_ban(ctx, member : discord.Member, reason=None):
                     f.write(f"FAILURE [ {guild} ][ {guild.id} ]\n")
     e = discord.Embed(title=f"{member} {member.id}", color=0xff0000).set_footer(text="BAN済みのサーバーも含まれます")
     e.add_field(name=f"Global BAN Result",value=f"全てのサーバー　`{str(len(bot.guilds))}`\nGban成功数 `{count}`")
-    msg = await ctx.respond(embed=e, ephemeral=True)
+    msg = await ctx.respond(embed=e)
     await ctx.respond(file=discord.File("result.txt", filename="GbanResult.txt"), ephemeral=True)
 
 @bot.slash_command(name="stop", description="開発者限定緊急停止")
@@ -326,23 +353,28 @@ async def spotify(ctx, user:discord.Member=None):
     if _spotify_result:
         embed=discord.Embed(color=_spotify_result.color)
         embed.set_thumbnail(url=_spotify_result.album_cover_url)
-        embed.add_field(name="Song Title", value=f"```{_spotify_result.title}```")
+        embed.add_field(name="Song Title", value=f"```{_spotify_result.title}```", inline=False)
         artists = _spotify_result.artists
         if not artists[0]: re_result=_spotify_result.artist
         else: re_result = ', '.join(artists)
         embed.add_field(name="Artist[s]", value=f"```{re_result}```")
-        embed.add_field(name="Album", value=f"```{_spotify_result.album}```", inline=False)
-        embed.add_field(name="Time", value=f"```{dateutil.parser.parse(str(_spotify_result.duration)).strftime('%M:%S')}```")
-        embed.add_field(name="URL", value=f"```https://open.spotify.com/track/{_spotify_result.track_id}```", inline=False)
+        embed.add_field(name="Album", value=f"```{_spotify_result.album}```")
+        embed.add_field(name="Time", value=f"```{dateutil.parser.parse(str(_spotify_result.duration)).strftime('%M:%S')}```", inline=False)
         embed.set_footer(text=f"By: {str(ctx.author)}")
+        b = Button(label="URL", style=discord.ButtonStyle.green, emoji="<:App_logo_spotify_p:1007557495436365905>")
+        jacket = Button(label="see jacket", style=discord.ButtonStyle.blurple, emoji="<:Icon_api:1007536617470312509>")#, row=1
         view = View()
-        b = Button(label="URL", url=f"https://open.spotify.com/track/{_spotify_result.track_id}")
-        jacket = Button(label="see jacket", style=discord.ButtonStyle.green, emoji="<:App_logo_spotify_p:1007557495436365905>")#, row=1
-        async def Button_callback(interaction:discord.Interaction):
-            await interaction.response.send_message(_spotify_result.album_cover_url, ephemeral=True)
-        jacket.callback = Button_callback
         view.add_item(b)
         view.add_item(jacket)
+        async def Button_1_callback(interaction:discord.Interaction):
+            b.disabled=True
+            await interaction.response.send_message(f"https://open.spotify.com/track/{_spotify_result.track_id}")
+
+        async def Button_callback(interaction:discord.Interaction):
+            await interaction.response.send_message(_spotify_result.album_cover_url, ephemeral=True)
+
+        jacket.callback = Button_callback
+        b.callback = Button_1_callback
         await ctx.respond(embed=embed, view=view)
 
 @bot.command(aliases=["s"])
@@ -353,24 +385,29 @@ async def spotify(ctx, user:discord.Member=None):
     if _spotify_result:
         embed=discord.Embed(color=_spotify_result.color)
         embed.set_thumbnail(url=_spotify_result.album_cover_url)
-        embed.add_field(name="Song Title", value=f"```{_spotify_result.title}```")
+        embed.add_field(name="Song Title", value=f"```{_spotify_result.title}```", inline=False)
         artists = _spotify_result.artists
         if not artists[0]: re_result=_spotify_result.artist
         else: re_result = ', '.join(artists)
         embed.add_field(name="Artist[s]", value=f"```{re_result}```")
-        embed.add_field(name="Album", value=f"```{_spotify_result.album}```", inline=False)
-        embed.add_field(name="Time", value=f"```{dateutil.parser.parse(str(_spotify_result.duration)).strftime('%M:%S')}```")
-        embed.add_field(name="URL", value=f"```https://open.spotify.com/track/{_spotify_result.track_id}```", inline=False)
+        embed.add_field(name="Album", value=f"```{_spotify_result.album}```")
+        embed.add_field(name="Time", value=f"```{dateutil.parser.parse(str(_spotify_result.duration)).strftime('%M:%S')}```", inline=False)
         embed.set_footer(text=f"By: {str(ctx.author)}")
+        b = Button(label="URL", style=discord.ButtonStyle.green, emoji="<:App_logo_spotify_white:1007559242984734720>")
+        jacket = Button(label="see jacket", style=discord.ButtonStyle.blurple, emoji="<:Icon_api:1007536617470312509>")#, row=1
         view = View()
-        b = Button(label="URL", url=f"https://open.spotify.com/track/{_spotify_result.track_id}")
-        jacket = Button(label="see jacket", style=discord.ButtonStyle.green, emoji="<:App_logo_spotify_white:1007559242984734720>")#, row=1
-        async def Button_callback(interaction:discord.Interaction):
-            await interaction.response.send_message(_spotify_result.album_cover_url, ephemeral=True)
-        jacket.callback = Button_callback
         view.add_item(b)
         view.add_item(jacket)
-        await ctx.message.reply(embed=embed, view=view, mention_author=False)
+        async def Button_1_callback(interaction:discord.Interaction):
+            b.disabled=True
+            await interaction.response.send_message(f"https://open.spotify.com/track/{_spotify_result.track_id}")
+
+        async def Button_callback(interaction:discord.Interaction):
+            await interaction.response.send_message(_spotify_result.album_cover_url, ephemeral=True)
+
+        jacket.callback = Button_callback
+        b.callback = Button_1_callback
+        await ctx.respond(embed=embed, view=view)
 
 @bot.slash_command(name="spotify_songs_search", description="Spotify楽曲を検索・・・日本語だと検索エラーとか出る")
 async def search(ctx, *, keyword):
@@ -469,30 +506,6 @@ async def leave(ctx, guild_id=None):
     await guild.leave()
     await ctx.respond(f"{guild}から脱退しました。")
 
-"""
-@bot.slash_command(name="createinvite", description="読んで字の如く")
-async def create_invite(ctx, guild_id=None):
-    if not guild_id:guild_id = ctx.guild.id
-    guild = bot.get_guild(int(guild_id))
-    i = 0
-    with open("invite.txt", "w", encoding='utf-8') as f:
-        for channel in guild.channels:
-            #link = await guild.channels.create_invite(max_age = 0, max_uses = 0)#xkcd=True,
-            link = await guild.channels[i].create_invite(max_age=0, max_uses = 0)
-            f.write(f"[{link}] - {channel}\n")
-            i += 1
-    await ctx.respond(file=discord.File("invite.txt", filename=f"{guild}_invite.txt"))
-        #await ctx.respond(file=discord.File(f),ephemeral=True)
-
-    if not guild_id:guild_id = ctx.guild.id
-    """#Create instant invite
-"""
-    guild = bot.get_guild(int(guild_id))
-
-    link = await guild.channels[0].create_invite(max_age = 0, max_uses = 0)#xkcd=True, 
-    await ctx.respond(link,ephemeral=True)
-"""
-
 @bot.slash_command(name="serverinfo", description="Get info about server")
 async def serverinfo(ctx):
     guild = ctx.guild
@@ -559,11 +572,11 @@ async def serverbanner(ctx):
         b.callback= button_callback
         view=View()
         view.add_item(b)
-        await ctx.send(embed=_embed, view=view)
+        await ctx.respond(embed=_embed, view=view)
     except:
         embed= discord.Embed(title= "Have you set banner?")
         embed.set_footer(text=str(f"By: {ctx.author}"))
-        await ctx.send(embed= embed)
+        await ctx.respond(embed= embed)
 
 @bot.slash_command(name="invitesplash", description="サーバーの招待背景を表示")
 async def invite_splash(ctx):
