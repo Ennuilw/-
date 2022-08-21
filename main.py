@@ -18,43 +18,6 @@ sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id = s.spotify
 Spotify_logo=[s.sp_logo_defa,s.sp_logo_wh]
 img_path = 'image.png'
 
-"""
-#memberCount = invite.approximate_member_count
-#presenceCount = invite.approximate_presence_count
-    invite = await ctx.channel.create_invite()
-    await ctx.send(f"Here's your invite: {invite}")
-    
-    if not int(interaction.author.id) in admin_users:
-
-flags = MessageFlags().EPHEMERAL)
-
-"""
-
-"""
-@bot.slash_command(name="createinvite", description="読んで字の如く")
-async def create_invite(ctx, guild_id=None):
-    if not guild_id:guild_id = ctx.guild.id
-    guild = bot.get_guild(int(guild_id))
-    i = 0
-    with open("invite.txt", "w", encoding='utf-8') as f:
-        for channel in guild.channels:
-            #link = await guild.channels.create_invite(max_age = 0, max_uses = 0)#xkcd=True,
-            link = await guild.channels[i].create_invite(max_age=0, max_uses = 0)
-            f.write(f"[{link}] - {channel}\n")
-            i += 1
-    await ctx.respond(file=discord.File("invite.txt", filename=f"{guild}_invite.txt"))
-        #await ctx.respond(file=discord.File(f),ephemeral=True)
-
-    if not guild_id:guild_id = ctx.guild.id
-    """#Create instant invite
-"""
-    guild = bot.get_guild(int(guild_id))
-
-    link = await guild.channels[0].create_invite(max_age = 0, max_uses = 0)#xkcd=True, 
-    await ctx.respond(link,ephemeral=True)
-"""
-
-
 
 @bot.event
 async def on_ready():
