@@ -1,6 +1,7 @@
 import setting as s
-import discord,dateutil.parser,random,subprocess,datetime,sys,spotipy,aiohttp,time
+import discord,dateutil.parser,random,subprocess,datetime,sys,spotipy,aiohttp,time,json
 from discord.ext import commands
+from discord.commands import Option
 from discord.ui import View, Button, Select
 
 from spotipy.oauth2 import SpotifyClientCredentials
@@ -15,8 +16,9 @@ intents=discord.Intents.all()
 bot=commands.Bot(command_prefix="k.", intents=intents)
 bot.remove_command("help")
 sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id = s.spotify_client_id, client_secret = s.spotify_client_secret))
-Spotify_logo=[s.sp_logo_defa,s.sp_logo_wh]
 img_path = 'image.png'
+
+
 
 
 @bot.event
@@ -25,9 +27,20 @@ async def on_ready():
 
 
 @bot.command()
+async def roles(ctx):
+    with open("rolelist.txt", "w", encoding="utf-8") as f:
+        role_ = sorted([role for role in ctx.guild.roles], reverse=True)
+        role_.pop()
+        f.write(f"Role: {str(len(role_))}\n")
+        [f.write(f"[{str(role.id)}] {role}\n") for role in role_]
+    await ctx.reply(file=discord.File("rolelist.txt"))
+
+
+@bot.command()
+@commands.cooldown(1,60, commands.BucketType.user)
 async def invites(ctx, id =None):
-    if ctx.author.id != s.Dev:
-        await ctx.send("gfy")
+    if not int(ctx.author.id) in s.admin_users:
+        await ctx.response.send_message("帰れ", ephemeral=True)
         return
     if not id:guild = ctx.guild
     else:guild = bot.get_guild(int(id))
@@ -38,66 +51,80 @@ async def invites(ctx, id =None):
     for invite in await guild.invites(): 
         await ctx.send(f"``{(invite.url).replace('https://discord.gg/', ' ')}``")
 
+@bot.slash_command(name="twitter_search", descriotion="tset")
+async def b(ctx, twitterid):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"https://api.vxxx.cf/twitter/shadowban?screen_name={twitterid}") as r:
+            req= await r.json()
+            if req["not_found"]:
+                embed=discord.Embed(title="@"+ twitterid, color=0xffff00).set_thumbnail(url="https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png").add_field(name='エラー:', value="アカウントが存在しない余",inline=False)
+                await ctx.respond(embed=embed)
+            elif req["suspend"]:
+                embed=discord.Embed(title="@"+ twitterid,url=f"http://twitter.com/{twitterid}", color=0xffff00)
+                embed.set_thumbnail(url="https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png")
+                embed.add_field(name='エラー:', value="```アカウントが凍結されてる余```",inline=False)
+                await ctx.respond(embed=embed)
+            else:
+                if req["ghost_ban"]:req["ghost_ban"] = "Yes🔴"
+                else:req["ghost_ban"] = "No🟢"
+                if req["no_tweet"]:req["no_tweet"] = "Yes🔴"
+                else:req["no_tweet"] = "No🟢"
+                if req["not_found"]:req["not_found"] = "Yes🔴"
+                else:req["not_found"] = "No🟢"
+                if req["search_ban"]:req["search_ban"] = "Yes🔴"
+                else:req["search_ban"] = "No🟢"
+                if req["search_suggestion_ban"]:req["search_suggestion_ban"] = "Yes🔴"
+                else:req["search_suggestion_ban"] = "No🟢"
+                if req["user"]["legacy"]["description"] == "":req["user"]["legacy"]["description"] = "NONE"
+                else:pass
+                if "profile_banner_url" in str(req):pass
+                else:req["user"]["legacy"]["profile_banner_url"] = ""
+                if req['user']['legacy']['location']:pass
+                else:req['user']['legacy']['location']="NONE"
+                embed=discord.Embed(title=req["user"]["legacy"]["name"]+"@"+req["user"]["legacy"]["screen_name"],url=f"http://twitter.com/{twitterid}", color=0xffff00)
+                embed.set_thumbnail(url=req["user"]["legacy"]["profile_image_url_https"])
+                embed.add_field(name="About me",value=f'```{str(req["user"]["legacy"]["description"])}```',inline=False)
+                embed.add_field(name='ghost ban', value="```"+str(req["ghost_ban"])+"```")
+                embed.add_field(name='no tweet', value="```"+str(req["no_tweet"])+"```")
+                embed.add_field(name='not found', value="```"+str(req["not_found"])+"```")
+                embed.add_field(name='search ban', value="```"+str(req["search_ban"])+"```")
+                embed.add_field(name='search suggestion ban', value="```"+str(req["search_suggestion_ban"])+"```")
+                embed.add_field(name="Following/Follower",value=f'```{str(req["user"]["legacy"]["friends_count"])} / {str(req["user"]["legacy"]["followers_count"])}```', inline=False)
+                embed.add_field(name="Tweets", value=f"```{req['user']['legacy']['statuses_count']}```")
+                embed.add_field(name="favorites/media", value=f"```{req['user']['legacy']['favourites_count']} / {req['user']['legacy']['media_count']}```")
+                embed.add_field(name="Location", value=f"```{req['user']['legacy']['location']}```")
+                embed.add_field(name="作成時間",value="```"+str(req["user"]["legacy"]["created_at"])+"```", inline=False)
+                embed.set_image(url= req["user"]["legacy"]["profile_banner_url"])
+                await ctx.respond(embed=embed)
+
 @bot.slash_command(name="invite_del", description="サーバーの招待コードを全削除")
+@commands.has_permissions(administrator=True)
 async def Delete_invite(ctx):
     guild = ctx.guild
     for invite in await guild.invites():
         await invite.delete()
     await ctx.respond("終わった")
-
-@bot.command()
-async def inserver(ctx) -> None:
-    if ctx.author.id != s.Dev:
-        await ctx.send("gfy")
-        return
-    with open("server.txt", "w", encoding='utf-8') as f:
-        activeservers = bot.guilds
-        for guild in activeservers:
-             f.write(f"[ {str(guild.id)} ] {guild.name}\n")
-    await ctx.send(file=discord.File("server.txt", filename="SERVERLIST.txt"))
-
-@bot.slash_command(name="global_ban", description="開発者専用")
-async def global_ban(ctx, member : discord.Member, reason=None):
-    if ctx.author.id != 959142919573491722:
-        await ctx.response.send_message("開発者専用", ephemeral=True)
-        return
-
-    msg_1 = await ctx.response.send_message("Global Banを開始します<a:Loading_2:1007527284753834014>")
-    count = 0
-
-    with open("result.txt", "w", encoding='utf-8') as f:
-        for guild in bot.guilds:
-            if guild.me.guild_permissions.ban_members:
-                try:
-                    await guild.ban(member, reason=reason)
-                    count += 1
-                    f.write(f"SUCCESS [ {guild} ][ {guild.id} ]\n")
-                except:
-                    f.write(f"FAILURE [ {guild} ][ {guild.id} ]\n")
-    e = discord.Embed(title=f"{member} {member.id}", color=0xff0000).set_footer(text="BAN済みのサーバーも含まれます")
-    e.add_field(name=f"Global BAN Result",value=f"全てのサーバー　`{str(len(bot.guilds))}`\nGban成功数 `{count}`")
-    msg = await ctx.respond(embed=e)
-    await ctx.respond(file=discord.File("result.txt", filename="GbanResult.txt"), ephemeral=True)
+    
 
 @bot.slash_command(name="stop", description="開発者限定緊急停止")
-async def SCRIPT_STOP(ctx):
-    if ctx.author.id != s.Dev:
-        await ctx.respond("帰れ")
+async def SCRIPT_STOP(interaction):
+    if not int(interaction.author.id) in s.admin_users:
+        await interaction.respond("帰れ")
         return
     user = bot.get_user(959142919573491722)
     e = discord.Embed(title="強制終了報告", description=f"{datetime.datetime.now()}",color=0x6dc1d1)
     await user.send(embed=e)
-    await ctx.respond(f"{datetime.datetime.now()}\n{ctx.author}\n{ctx.author.id}")    
+    await interaction.respond(f"{datetime.datetime.now()}\n{interaction.author}\n{interaction.author.id}")    
     sys.exit()
 
 @bot.slash_command(name="夕弦", )
-async def ON_BOT(ctx):
-    if ctx.author.id != s.Dev:
-        await ctx.respond("帰れ", ephemeral=True)
+async def ON_BOT(interaction):
+    if not int(interaction.author.id) in s.admin_users:
+        await interaction.respond("帰れ", ephemeral=True)
         return
     subprocess.run("cd C:\\Users\\Ennui\\BOT", shell = True)
-    subprocess.run("python spam.py", shell=True)
-    await ctx.respond("<@968603083414331423>")
+    subprocess.run("python .py", shell=True)
+    await interaction.respond("<@968603083414331423>")
 
 @bot.slash_command(name="原神ラインスタンプ", descriptin="原神LINEステッカーをZIPファイルで送信")
 async def send_ZipFile(ctx):
@@ -105,101 +132,8 @@ async def send_ZipFile(ctx):
         pic = discord.File(f)
         await ctx.respond("１０秒後削除",file=pic, delete_after=10)
 
-@bot.slash_command(name="原神聖遺物スコア計算", desciption="小数点も要する")
-async def clac_score(ctx,会心率:float=None, 会心ダメージ:float=None, 攻撃_防御力:float=None):
-    if not 攻撃_防御力: 攻撃_防御力=0
-    if not 会心ダメージ:会心ダメージ=0
-    if not 会心率:会心率=0
-    score = 攻撃_防御力 + (会心率 * 2) + 会心ダメージ
-    e = discord.Embed(description=f"**スコア** : **{round(score, 1)}**\n\n> 会心率```{会心率} %```\n> 会心ダメージ```{会心ダメージ} %```\n> 攻撃力・防御力```{攻撃_防御力} %```", color=0x6dc1d1)
-    e.set_footer(text="20Lv想定でサブスコアのみ計算してます | Beta ver")
-    await ctx.respond(embed=e)
-
-@bot.command()
-async def pic(ctx):
-    def show_tiled_main_color(color_arr):
-        IMG_SIZE = 64
-        MARGIN = 15
-        width = IMG_SIZE * color_arr.shape[0] + MARGIN * 2
-        height = IMG_SIZE + MARGIN * 2
-        tiled_color_img = Image.new(
-            mode='RGB', size=(width, height), color='#333333')
-        for i, rgb_arr in enumerate(color_arr):
-            color_hex_str = '#%02x%02x%02x' % tuple(rgb_arr)
-            color_img = Image.new(mode='RGB', size=(IMG_SIZE, IMG_SIZE),color=color_hex_str)
-            tiled_color_img.paste(im=color_img,box=(MARGIN + IMG_SIZE * i, MARGIN))
-        tiled_color_img.save('image\stripe_' + img_path)
-    def extract_main_color(img_path, color_num):
-        cv2_img = cv2.imread(img_path)
-        cv2_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
-        cv2_img = cv2_img.reshape((cv2_img.shape[0] * cv2_img.shape[1], 3))
-        cluster = KMeans(n_clusters=color_num)
-        cluster.fit(X=cv2_img)
-        cluster_centers_arr = cluster.cluster_centers_.astype(int, copy=False)
-        trans_color = cv2_img[0]
-        cluster_centers_arr = np.array([i for i in cluster_centers_arr if LA.norm(np.array(i - trans_color), 2) > 50])
-        return cluster_centers_arr
-    msg = await ctx.reply("Please wait a moment.<a:Loading_2:1007527284753834014>")
-    r = requests.get(ctx.message.attachments[0].url)
-    img = Image.open(io.BytesIO(r.content))
-    img.save("image.png")
-    color_arr = extract_main_color(img_path, 7)
-    show_tiled_main_color(color_arr)
-    file = discord.File("./image/stripe_image.png", filename="stripe.png")
-    await msg.edit(content="Done<a:VerifyMark_1:987128219658514484>",file=file)
-
-@bot.slash_command(name="タイプ別憤死")
-async def type_funshi(ctx):
-    text_funshi = """**典型的憤死パターン**<:emoji_15:1004313871705702441>
-_1.発狂型憤死_
-明らかに劣勢な状態になってから露骨に発作を起こしキチガイムーヴを始めるタイプ。
-ネタに走って有耶無耶にしようという意図が見え見えである。
-
-_2.生存本能型憤死_
-生存本能タイムアウト/ブロック/ミュート/BANを行うタイプ。
-憤死回避のために実力行使を行ってしまったが故の行動である。
-
-_3.糖質化型憤死_
-明らかな決めつけや思い込みをし始め勝手に憤慨し続けるタイプ。
-***の圧倒的煽りによって極度のストレスを受けた故の行動である。
-
-_4.ノーダメアピール型憤死_
-ノーダメアピールを繰り返し精神的勝利を訴え続けるタイプ。
-トマトフェイスを隠しきれていないため周りから見ると滑稽である。
-
-_5.スルー型憤死_
-突然話題を変えることで露骨にスルーアピールをするタイプ。
-指摘されるとすぐ必死になって否定をしてくることが多い。"""
-    b = Button(label="十字軍に行く", url="https://discord.gg/hunshi")
-    view = View()
-    view.add_item(b)
-
-    b.disabled=True
-    
-    await ctx.respond(text_funshi, view=view)
-
-@bot.slash_command(name="憤死ワード")
-async def word_list(ctx):
-    b = Button(label="十字軍に行く", url="https://discord.gg/hunshi")
-    view = View()
-    view.add_item(b)
-    b.disabled=True
-    await ctx.respond("""**典型的憤死ワード集**<:emoji_15:1004313871705702441>
-・荒らしで時間無駄にしてて草
-・しょうもないことして楽しい？
-・BANすればいいだけ 残念だったな
-・ムカつくから黙れ
-・学歴しか誇れないゴミで草
-・楽しんでて哀れ
-・暇つぶし楽しかったよ
-・学歴と頭脳は比例しない
-・あーもうこいつうるさいから蹴ろう
-・誤字してて草
-・十字軍はくだらない組織
-・あそんでいるだけなんだが？""", view=view) 
-
-@bot.command()
-async def gensin(ctx):
+@bot.slash_command(name="原神ラインスタンプサーバー", description="原神Lineステッカーサーバー招待URLを送信")
+async def gensin(interaction):
     text = ("""<:gensin_L_sticker_futao_3:1005709133179256894>
 https://discord.gg/fqyPF8UUeE
 https://discord.gg/2eQVbVMHVm
@@ -253,29 +187,161 @@ https://discord.gg/rphUapSWYt
 https://discord.gg/TedNhwqt2g
 https://discord.gg/YukvxMVv44
 https://discord.gg/XdsKcdyNEm""")
-    await ctx.send(text)
+    await interaction.respond(text)
+
+@bot.slash_command(name="原神聖遺物スコア計算", desciption="小数点も要する")
+async def clac_score(interaction,
+        会心率:Option(float,"会心率 / Membership rate")=None,
+        会心ダメージ:Option(float, "会心ダメージ / Membership rate")=None,
+        攻撃_防御力:Option(float, "攻撃力 or 防御力 / ATK or DEF")=None,
+        聖遺物:Option(str, "聖遺物を選択してください / Choice your Artifacts" ,choices=["花/羽/杯", "時計/冠"] )=None
+    ):
+    msg = await interaction.respond("<a:Loading_6:1012760935343063050>")
+    if not 攻撃_防御力: 攻撃_防御力=0
+    if not 会心ダメージ:会心ダメージ=0
+    if not 会心率:会心率=0
+    score = 攻撃_防御力 + (会心率 * 2) + 会心ダメージ
+
+    e = discord.Embed(description=f"**スコア** : **{round(score, 1)}**\n\n> 会心率```{会心率} %```\n> 会心ダメージ```{会心ダメージ} %```\n> 攻撃力・防御力```{攻撃_防御力} %```", color=0x6dc1d1)
+    e.set_footer(text="20Lv想定でサブスコアのみ計算してます | Beta ver")
+    if not 聖遺物:pass
+    else:
+        if 聖遺物 in ("時計/冠"):
+            if score >= 30:e.title="時計/冠 -合格"
+            else:e.title="時計/冠 -カスコアやんけ捨てろよwww"
+        else:
+            if score >= 50:e.title="花/羽/杯 -合格"
+            else:e.title="花/羽/杯 -カスコアやんけ捨てろよwww"
+    await msg.edit_original_message(content=None,embed=e)
+
+@bot.command()
+async def pic(ctx):
+    def show_tiled_main_color(color_arr):
+        IMG_SIZE = 64
+        MARGIN = 15
+        width = IMG_SIZE * color_arr.shape[0] + MARGIN * 2
+        height = IMG_SIZE + MARGIN * 2
+        tiled_color_img = Image.new(
+            mode='RGB', size=(width, height), color='#333333')
+        for i, rgb_arr in enumerate(color_arr):
+            color_hex_str = '#%02x%02x%02x' % tuple(rgb_arr)
+            color_img = Image.new(mode='RGB', size=(IMG_SIZE, IMG_SIZE),color=color_hex_str)
+            tiled_color_img.paste(im=color_img,box=(MARGIN + IMG_SIZE * i, MARGIN))
+        tiled_color_img.save('image\stripe_' + img_path)
+    def extract_main_color(img_path, color_num):
+        cv2_img = cv2.imread(img_path)
+        cv2_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
+        cv2_img = cv2_img.reshape((cv2_img.shape[0] * cv2_img.shape[1], 3))
+        cluster = KMeans(n_clusters=color_num)
+        cluster.fit(X=cv2_img)
+        cluster_centers_arr = cluster.cluster_centers_.astype(int, copy=False)
+        trans_color = cv2_img[0]
+        cluster_centers_arr = np.array([i for i in cluster_centers_arr if LA.norm(np.array(i - trans_color), 2) > 50])
+        return cluster_centers_arr
+    msg = await ctx.reply("Please wait a moment.<a:Loading_2:1007527284753834014>")
+    r = requests.get(ctx.message.attachments[0].url)
+    img = Image.open(io.BytesIO(r.content))
+    img.save("image.png")
+    color_arr = extract_main_color(img_path, 7)
+    show_tiled_main_color(color_arr)
+    file = discord.File("./image/stripe_image.png", filename="stripe.png")
+    await msg.edit(content="Done<a:VerifyMark_1:987128219658514484>",file=file)
+"""
+はよ続きやれや
+https://note.com/shiftkey/n/n3d95ca76dd1d
+
+
+#@slash_client.user_command()
+async def pic(ctx):
+    def show_tiled_main_color(color_arr):
+        IMG_SIZE = 64
+        MARGIN = 15
+        width = IMG_SIZE * color_arr.shape[0] + MARGIN * 2
+        height = IMG_SIZE + MARGIN * 2
+        tiled_color_img = Image.new(
+            mode='RGB', size=(width, height), color='#333333')
+        for i, rgb_arr in enumerate(color_arr):
+            color_hex_str = '#%02x%02x%02x' % tuple(rgb_arr)
+            color_img = Image.new(mode='RGB', size=(IMG_SIZE, IMG_SIZE),color=color_hex_str)
+            tiled_color_img.paste(im=color_img,box=(MARGIN + IMG_SIZE * i, MARGIN))
+        tiled_color_img.save('image\stripe_' + img_path)
+    def extract_main_color(img_path, color_num):
+        cv2_img = cv2.imread(img_path)
+        cv2_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
+        cv2_img = cv2_img.reshape((cv2_img.shape[0] * cv2_img.shape[1], 3))
+        cluster = KMeans(n_clusters=color_num)
+        cluster.fit(X=cv2_img)
+        cluster_centers_arr = cluster.cluster_centers_.astype(int, copy=False)
+        trans_color = cv2_img[0]
+        cluster_centers_arr = np.array([i for i in cluster_centers_arr if LA.norm(np.array(i - trans_color), 2) > 50])
+        return cluster_centers_arr
+    msg = await ctx.reply("Please wait a moment.<a:Loading_2:1007527284753834014>")
+    r = requests.get(ctx.message.attachments[0].url)
+    img = Image.open(io.BytesIO(r.content))
+    img.save("image.png")
+    color_arr = extract_main_color(img_path, 7)
+    show_tiled_main_color(color_arr)
+    file = discord.File("./image/stripe_image.png", filename="stripe.png")
+    await msg.edit(content="Done<a:VerifyMark_1:987128219658514484>",file=file)
+"""
+
+@bot.slash_command(name="タイプ別憤死")
+async def type_funshi(ctx):
+    text_funshi = """**典型的憤死パターン** <:emoji_15:1004313871705702441>\n
+**1.発狂型憤死**
+明らかに劣勢な状態になってから露骨に発作を起こしキチガイムーヴを始めるタイプ。
+ネタに走って有耶無耶にしようという意図が見え見えである。
+
+**2.生存本能型憤死**
+生存本能タイムアウト/ブロック/ミュート/BANを行うタイプ。
+憤死回避のために実力行使を行ってしまったが故の行動である。
+
+**3.糖質化型憤死**
+明らかな決めつけや思い込みをし始め勝手に憤慨し続けるタイプ。
+\*\*\*の圧倒的煽りによって極度のストレスを受けた故の行動である。
+
+**4.ノーダメアピール型憤死**
+ノーダメアピールを繰り返し精神的勝利を訴え続けるタイプ。
+トマトフェイスを隠しきれていないため周りから見ると滑稽である。
+
+**5.スルー型憤死**
+突然話題を変えることで露骨にスルーアピールをするタイプ。
+指摘されるとすぐ必死になって否定をしてくることが多い。
+
+[十字軍に行く](https://discord.gg/aKyTHXZC)"""
+    await ctx.respond(text_funshi)
+
+@bot.slash_command(name="憤死ワード")
+async def word_list(interaction):
+    await interaction.respond("""**典型的憤死ワード集** <:emoji_15:1004313871705702441>
+・荒らしで時間無駄にしてて草
+・しょうもないことして楽しい？
+・BANすればいいだけ 残念だったな
+・ムカつくから黙れ
+・学歴しか誇れないゴミで草
+・楽しんでて哀れ
+・暇つぶし楽しかったよ
+・学歴と頭脳は比例しない
+・あーもうこいつうるさいから蹴ろう
+・誤字してて草
+・十字軍はくだらない組織
+・あそんでいるだけなんだが？
+
+[十字軍に行く](https://discord.gg/aKyTHXZC)""") 
+
 
 @bot.slash_command(name="about", description="About this bot")
-async def about(ctx):
+async def about(ctx) ->None:
     user= bot.get_user(956042267221721119)
     members = 0
     for guild in bot.guilds:members += guild.member_count - 1
-    embed= discord.Embed(title="About this bot", color= 0x6dc1d1)
-    embed.add_field(name= "<:icons_serverinsight:981767862463107132> Customers",value= f"Servers **:** `{str(len(bot.guilds))}`\nMembers **:** `{str(members)}`", inline= False)
-    embed.add_field(name= "<:icons_supportteam:1007534581467074642> Dev", value= f"{user.mention}", inline= False)
-    embed.set_thumbnail(url=bot.user.avatar.url)
-    embed.add_field(name="<:icons_info:1007531327333093477> 注釈",value="適当にスクリプト書いた。駄作です。")
+    embed= discord.Embed(title="About this bot", description="なぜか日本語と英語が入り混じってます。\n適当にスクリプト書いた。駄作です。<:Cirnohi:1010798243866755114>", color= 0x6dc1d1)
+    embed.add_field(name= "Customers",value= f"> **Servers:** {str(len(bot.guilds))}\n> **Members:** {str(members)}", inline= False)
+    embed.add_field(name= "Support", value= f"> **Deveroper:** {user.mention}\n> **Source:** [Github](https://github.com/Ennuilw/-/tree/main)\n\
+        > **Our server:** ||[Click me](https://discord.gg/projectengage)||", inline= False)
+    #<:icons_serverinsight:981767862463107132> <:icons_github:1010802697097711676>
     embed.set_footer(text=f"By: {str(ctx.author)}")
-    b = Button(label="Support Server", url="https://discord.gg/owen")
-    b2 = Button(label="Invite URL", url=f"https://discord.com/oauth2/authorize?client_id=979001395703341096&permissions=1644971949559&scope=bot%20applications.commands")
-    b3 = Button(label="source code", url="https://github.com/Ennuilw/-/tree/main")
-    view = View()
-    view.add_item(b)
-    b.disabled = True
-    view.add_item(b2)
-    view.add_item(b3)
-
-    await ctx.respond(embed=embed, view=view)
+    await ctx.respond(embed=embed)
 
 @bot.slash_command(name="avatar", description="サーバープロフィールのアイコンを取得")
 async def avatar(ctx, user:discord.Member=None):
@@ -287,7 +353,7 @@ async def avatar(ctx, user:discord.Member=None):
     embed.set_footer(text= f"By: {str(ctx.author)}")
     await ctx.respond(embed= embed)
 
-@bot.slash_command(name="banner", description="Get the ")
+@bot.slash_command(name="banner", description="ユーザープロフィールからバナーを取得。もしあれば。")
 async def banner(ctx, user:discord.Member=None):
     if not user:user=ctx.author
     user = await bot.fetch_user(user.id)
@@ -344,7 +410,7 @@ async def spotify(ctx, user:discord.Member=None):
 async def spotify(ctx, user:discord.Member=None):
     if not user:user=ctx.author
     _spotify_result= next((activity for activity in user.activities if isinstance(activity, discord.Spotify)), None)
-    if _spotify_result is None:await ctx.respond(f"{user.name} is not listening to Spotify!")
+    if _spotify_result is None:await ctx.send(f"{user.name} is not listening to Spotify!")
     if _spotify_result:
         embed=discord.Embed(color=_spotify_result.color)
         embed.set_thumbnail(url=_spotify_result.album_cover_url)
@@ -370,23 +436,19 @@ async def spotify(ctx, user:discord.Member=None):
 
         jacket.callback = Button_callback
         b.callback = Button_1_callback
-        await ctx.respond(embed=embed, view=view)
+        await ctx.send(embed=embed, view=view)
 
-@bot.slash_command(name="spotify_songs_search", description="Spotify楽曲を検索・・・日本語だと検索エラーとか出る")
+@bot.slash_command(name="spotify_songs_search", description="Spotify楽曲を検索・・・日本語だとたまにエラー出る")
 async def search(ctx, *, keyword):
     result = sp.search(q=keyword, limit=5)
-    view = View()
-    i = 0
-    e = discord.Embed(description="<:_info:1007535167952392203> **見方**\n```曲名 [アルバム名] - アーティスト```",color=s.s_c).set_thumbnail(url=random.choice(Spotify_logo))
+    e = discord.Embed(color=s.s_c)
     for idx, track in enumerate(result['tracks']['items']):
-        #songs.append(track['external_urls']['spotify'])
-        e.add_field(name=f"{idx + 1} - Detales", value=f"```{track['name']} [{track['album']['name']}] - {track['artists'][0]['name']}```", inline=False)
-        i += 1
-        b = Button(label=str(idx + 1), url = track['external_urls']['spotify'])
-        view.add_item(b)
-    await ctx.respond(embed=e, view=view)
+        song_title = track['name']
+        song_url = track['external_urls']['spotify']
+        e.add_field(name = f"{song_title} [{track['album']['name']}] - {track['artists'][0]['name']}", value= f"-[Jumo to song]({song_url})", inline=False)
+    await ctx.respond(embed=e)
 
-@bot.slash_command(name="invite", description="メンテナンス中 | Botをメンションして招待URLを生成。 IDを入れるやつは馬鹿")
+@bot.slash_command(name="invite", description="Botをメンションして招待URLを生成。")
 async def invite(ctx, mention:discord.Member):
     e=discord.Embed(description=f"{mention}(**{mention.id}**)", color=0x6dc1d1)
     date_format="%Y/%m/%d %H:%M"
@@ -461,13 +523,13 @@ async def vanity(ctx):
     except:await ctx.respond("ない")
 
 @bot.slash_command(name="leave")
-@commands.has_permissions(administrator=True)
-async def leave(ctx, guild_id=None):
-    if not guild_id:guild_id=ctx.guild.id
-    #guild = bot.get_guild(int(guild_id)).leave()
+async def leave(interaction, guild_id=None):
+    if not int(interaction.author.id) in s.admin_users:
+        await interaction.response.send_message("帰れ", ephemeral=True)
+        return
     guild = bot.get_guild(int(guild_id))
     await guild.leave()
-    await ctx.respond(f"{guild}から脱退しました。")
+    await interaction.respond(f"{guild}から脱退しました。")
 
 @bot.slash_command(name="serverinfo", description="Get info about server")
 async def serverinfo(ctx):
@@ -575,17 +637,18 @@ async def ban(ctx, user:discord.Member, reason= None):
 
 @bot.slash_command(name="nuke", description="チャンネルを再作成")
 @commands.has_permissions(administrator=True)
-async def delete(ctx, channel:discord.TextChannel=None, meonly=None):
-    if not channel:channel=ctx.channel
-    else:channel = discord.utils.get(ctx.guild.channels, name=channel.name)
+async def delete(interaction, channel:discord.TextChannel=None, meonly:Option(str, choices=["Yes", "No"])=None):
+    if not channel:channel=interaction.channel
+    else:channel = discord.utils.get(interaction.guild.channels, name=channel.name)
     pos = channel.position
     await channel.delete()
     new_channel = await channel.clone()
     await new_channel.edit(position=pos)
-    if meonly:await ctx.respond(f"<#{new_channel.id}>", ephemeral=True)
-    else :await ctx.respond(f"<#{new_channel.id}>")
+    if meonly in ("Yes"):await interaction.respond(f"<#{new_channel.id}>", ephemeral=True)
+    else :await interaction.respond(f"<#{new_channel.id}>")
 
 @bot.slash_command(name="xserver", description="server idを入れてね!このボットが入ってるサーバーの情報を取得")
+@commands.cooldown(1,60, commands.BucketType.user)
 async def xserver(ctx, id:str):
     guild = bot.get_guild(int(id))
     date_f= "%Y/%m/%d"
@@ -621,7 +684,7 @@ async def xserver(ctx, id:str):
             embed.set_footer(text= f"By: {str(ctx.author)} ・Banner is png file")
             b= Button(label="See on Gif",style=discord.ButtonStyle.green)
         async def button_callback(interaction):
-           await interaction.response.send_message(banner_url_gif, view=None, ephemeral=True)
+            await interaction.response.send_message(banner_url_gif, view=None, ephemeral=True)
         b.callback= button_callback
         view=View()
         view.add_item(b)
@@ -630,46 +693,42 @@ async def xserver(ctx, id:str):
         embed.set_footer(text= f"By: {str(ctx.author)}")
         await ctx.respond(embed=embed)
 
-@bot.slash_command(name="source", description="スキッドしまくったこのBOTの雑魚ード貼ってます。")
-async def source_code(ctx):
-    e = discord.Embed(description="PythonなのにClass使ってません:sob:",color=0x6dc1c1)
-    b = Button(label="Jump to Github", url="https://github.com/Ennuilw/-/tree/main")
-    view=View()
-    view.add_item(b)
-    await ctx.respond(embed=e, view=view)
 
 @bot.event
-async def on_command_error(ctx, error):
-        if isinstance(error, discord.ext.commands.errors.MissingPermissions):
-            embed = discord.Embed(title="-MissingPermissions", description=error, color=0xff0000)
-            await ctx.send(embed=embed)
-        elif isinstance(error, discord.errors.ApplicationCommandInvokeError):
-            embed = discord.Embed(title="-ApplicationCommandInvokeError", description=error, color=0xff0000)
-            await ctx.send(embed=embed)
-        elif isinstance(error, discord.ext.commands.errors.BotMissingPermissions):
-            embed = discord.Embed(title="-BotMissingPermissions", description=error, color=0xff0000)
-            await ctx.send(embed=embed)
-        elif isinstance(error, discord.ext.commands.errors.CommandNotFound):
-            embed = discord.Embed(title="-CommandNotFound", description=f"おいおっさんwんなコマンドねーぞwwwちゃんと見ろメクラwwwww。", color=0xff0000)
-            await ctx.send(embed=embed)
-        elif isinstance(error, discord.ext.commands.errors.MemberNotFound):
-            embed = discord.Embed(title="-MemberNotFound", description=error, color=0xff0000)
-            await ctx.send(embed=embed)
-        elif isinstance(error, discord.ext.commands.errors.BadArgument):
-            embed = discord.Embed(title="-BadArgument", description=error, color=0xff0000)
-            await ctx.send(embed=embed) 
-        elif isinstance(error, discord.ext.commands.errors.MissingRequiredArgument):
-            embed = discord.Embed(title="-BadArgument", description=error, color=0xff0000)
-            await ctx.send(embed=embed)
-        elif isinstance(error,discord.ext.commands.errors.MissingRole):
-            embed = discord.Embed(title="-MissingRole", description=error, color=0xff0000)
-            await ctx.send(embed=embed)
-        elif isinstance(error, discord.ext.commands.errors.CheckFailure):
-            embed = discord.Embed(title="-CheckFailure", description=error, color=0xff0000)
-            await ctx.send(embed=embed)
-        elif isinstance(error, discord.ext.commands.errors.CommandInvokeError):
-            embed = discord.Embed(title="-CommandInvokeError", description=error, color=0xff0000)
-            await ctx.send(embed=embed)
-        else:raise error
+async def on_application_command_error(interaction, error):
+    if isinstance(error, commands.MissingPermissions):
+        embed = discord.Embed(title="-MissingPermissions", description=error, color=0xff0000)
+        await interaction.respond(embed=embed)
+    elif isinstance(error, commands.MissingRole):
+        e = discord.Embed(title="-MissingRole", description=error)
+        await interaction.respond(embed=e)
+    elif isinstance(error, commands.CommandInvokeError):
+        embed = discord.Embed(title="-ApplicationCommandInvokeError", description=error, color=0xff0000)
+        await interaction.respond(embed=embed)
+    elif isinstance(error, commands.BotMissingPermissions):
+        embed = discord.Embed(title="-BotMissingPermissions", description=error, color=0xff0000)
+        await interaction.respond(embed=embed)
+    elif isinstance(error, commands.MemberNotFound):
+        embed = discord.Embed(title="-MemberNotFound", description=error, color=0xff0000)
+        await interaction.respond(embed=embed)
+    elif isinstance(error, commands.BadArgument):
+        embed = discord.Embed(title="-BadArgument", description=error, color=0xff0000)
+        await interaction.respond(embed=embed) 
+    elif isinstance(error, commands.MissingRequiredArgument):
+        embed = discord.Embed(title="-BadArgument", description=error, color=0xff0000)
+        await interaction.respond(embed=embed)
+    elif isinstance(error,commands.MissingRole):
+        embed = discord.Embed(title="-MissingRole", description=error, color=0xff0000)
+        await interaction.respond(embed=embed)
+    elif isinstance(error, commands.CheckFailure):
+        embed = discord.Embed(title="-CheckFailure", description=error, color=0xff0000)
+        await interaction.respond(embed=embed)
+    elif isinstance(error, commands.CommandInvokeError):
+        embed = discord.Embed(title="-CommandInvokeError", description=error, color=0xff0000)
+        await interaction.respond(embed=embed)
+    elif isinstance(error, commands.CommandOnCooldown):
+        embed=discord.Embed(title="-CommandOnCooldown",description=error, color =0xff0000)
+        await interaction.respond(embed=embed)
+    else:raise error
 
 bot.run(s.token)
