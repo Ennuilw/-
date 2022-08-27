@@ -51,51 +51,6 @@ async def invites(ctx, id =None):
     for invite in await guild.invites(): 
         await ctx.send(f"``{(invite.url).replace('https://discord.gg/', ' ')}``")
 
-@bot.slash_command(name="twitter_search", descriotion="tset")
-async def b(ctx, twitterid):
-    async with aiohttp.ClientSession() as session:
-        async with session.get(f"https://api.vxxx.cf/twitter/shadowban?screen_name={twitterid}") as r:
-            req= await r.json()
-            if req["not_found"]:
-                embed=discord.Embed(title="@"+ twitterid, color=0xffff00).set_thumbnail(url="https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png").add_field(name='エラー:', value="アカウントが存在しない余",inline=False)
-                await ctx.respond(embed=embed)
-            elif req["suspend"]:
-                embed=discord.Embed(title="@"+ twitterid,url=f"http://twitter.com/{twitterid}", color=0xffff00)
-                embed.set_thumbnail(url="https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png")
-                embed.add_field(name='エラー:', value="```アカウントが凍結されてる余```",inline=False)
-                await ctx.respond(embed=embed)
-            else:
-                if req["ghost_ban"]:req["ghost_ban"] = "Yes🔴"
-                else:req["ghost_ban"] = "No🟢"
-                if req["no_tweet"]:req["no_tweet"] = "Yes🔴"
-                else:req["no_tweet"] = "No🟢"
-                if req["not_found"]:req["not_found"] = "Yes🔴"
-                else:req["not_found"] = "No🟢"
-                if req["search_ban"]:req["search_ban"] = "Yes🔴"
-                else:req["search_ban"] = "No🟢"
-                if req["search_suggestion_ban"]:req["search_suggestion_ban"] = "Yes🔴"
-                else:req["search_suggestion_ban"] = "No🟢"
-                if req["user"]["legacy"]["description"] == "":req["user"]["legacy"]["description"] = "NONE"
-                else:pass
-                if "profile_banner_url" in str(req):pass
-                else:req["user"]["legacy"]["profile_banner_url"] = ""
-                if req['user']['legacy']['location']:pass
-                else:req['user']['legacy']['location']="NONE"
-                embed=discord.Embed(title=req["user"]["legacy"]["name"]+"@"+req["user"]["legacy"]["screen_name"],url=f"http://twitter.com/{twitterid}", color=0xffff00)
-                embed.set_thumbnail(url=req["user"]["legacy"]["profile_image_url_https"])
-                embed.add_field(name="About me",value=f'```{str(req["user"]["legacy"]["description"])}```',inline=False)
-                embed.add_field(name='ghost ban', value="```"+str(req["ghost_ban"])+"```")
-                embed.add_field(name='no tweet', value="```"+str(req["no_tweet"])+"```")
-                embed.add_field(name='not found', value="```"+str(req["not_found"])+"```")
-                embed.add_field(name='search ban', value="```"+str(req["search_ban"])+"```")
-                embed.add_field(name='search suggestion ban', value="```"+str(req["search_suggestion_ban"])+"```")
-                embed.add_field(name="Following/Follower",value=f'```{str(req["user"]["legacy"]["friends_count"])} / {str(req["user"]["legacy"]["followers_count"])}```', inline=False)
-                embed.add_field(name="Tweets", value=f"```{req['user']['legacy']['statuses_count']}```")
-                embed.add_field(name="favorites/media", value=f"```{req['user']['legacy']['favourites_count']} / {req['user']['legacy']['media_count']}```")
-                embed.add_field(name="Location", value=f"```{req['user']['legacy']['location']}```")
-                embed.add_field(name="作成時間",value="```"+str(req["user"]["legacy"]["created_at"])+"```", inline=False)
-                embed.set_image(url= req["user"]["legacy"]["profile_banner_url"])
-                await ctx.respond(embed=embed)
 
 @bot.slash_command(name="invite_del", description="サーバーの招待コードを全削除")
 @commands.has_permissions(administrator=True)
