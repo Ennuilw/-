@@ -1,12 +1,13 @@
+from lib2to3.pgen2.tokenize import generate_tokens
 import setting as s
 import discord,dateutil.parser,random,subprocess,datetime,sys,spotipy,aiohttp,time,json,asyncio
 from discord.ext import commands
 from discord.commands import Option
 from discord.ui import View, Button, Select
-
 from spotipy.oauth2 import SpotifyClientCredentials
+from decimal import Decimal, ROUND_HALF_UP, ROUND_HALF_EVEN
 
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from sklearn.cluster import KMeans
 import numpy as np
 from numpy import linalg as LA
@@ -15,10 +16,68 @@ import requests,cv2,io
 intents=discord.Intents.all()
 bot=commands.Bot(command_prefix="k.", intents=intents)
 sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id = s.spotify_client_id, client_secret = s.spotify_client_secret))
+img_path = 'image.png'
+t_delta = datetime.timedelta(hours=9)
+JST = datetime.timezone(t_delta, 'JST')
+now = datetime.datetime.now(JST)
 
 @bot.event
 async def on_ready():
     await bot.change_presence(activity=discord.Streaming(platform="YouTube", name="D-tecnoLife", url="https://www.youtube.com/watch?v=IITjr6Ysh60"))
+    channel = bot.get_channel(1018888750069202974)
+    e = discord.Embed(title="On ready!", description=f"{now.strftime('%Y/%m/%d %H:%M')}")
+    await channel.send(embed=e)
+
+
+@bot.message_command(name="account")
+async def test(interaction:discord.Interaction, usr:discord.Member):
+    await interaction.response.send_message("まだ使えないよバーーカｗｗｗｗ", ephemeral=True)
+
+@bot.command(aliases=["sc"])
+async def spell_check(ctx):
+    var = random.randint(1, 2)
+    b_e1 = discord.Embed(color = 0x6cd1c1)
+    match (var):
+        case 1:
+            b_e1 = discord.Embed(title="初期化の英単語", color = 0x6cd1c1)
+            answer = "initialization"
+        case 2:
+            b_e1 = discord.Embed(title="代入の英単語", color=0x6cd1c1)
+            answer = "assignment"
+        case 3:
+            b_e1 = discord.Embed(title="認可されたんティティが要求したときにアクセス及び使用が可能である特性", color=0x6cd1c1)
+            answer = "availability"
+
+    await ctx.reply(embed=b_e1, mention_author=False)
+    s_time = time.perf_counter()
+    try:
+        message = await bot.wait_for("message", timeout=10.0, check = lambda m:m.author and m.channel == ctx.channel)
+    except asyncio.TimeoutError:
+        await ctx.send(embed=discord.Embed(title = ":timer: 時間切れ！",color = 0xff0000))
+    else:
+        if message.content.lower() == answer:
+            e_time = time.perf_counter()
+            
+            await message.reply(f":o: 正解\n{Decimal(str(e_time - s_time)).quantize(Decimal('0.1'), rounding=ROUND_HALF_UP) }秒")
+        else:await message.reply(":x: 不正解だよ。バカが。")
+
+
+
+@bot.command(aliases=["e"], description="フォント名: Meiryo UI 太字, Meiryo UI 太字 斜体, メイリオ ボールド, メイリオ, ボールドイタリック\nファイル名: meiryob.ttc")
+async def emo(ctx, *, word):
+    if (4 <= len(word)):X = 400
+    elif (3 == len(word)):X = 300
+    elif (2 == len(word)):X = 200
+    else:X=100
+        
+    im = Image.new("RGB", (X, 95), (255, 255, 255))
+    im.putalpha(0)
+    font = ImageFont.truetype("C:\\Windows\\Fonts\\meiryob.ttc", 99)
+    draw = ImageDraw.Draw(im)
+    draw.text((0, -20), word, fill=(255, 123, 157), font=font)
+    im = im.resize((108, 108), resample=0)
+    im.save("emoji.png")
+    await ctx.reply(file=discord.File("emoji.png"), mention_author=False)
 
 @bot.command()
 async def roles(ctx):
@@ -44,6 +103,15 @@ async def invites(ctx, id =None):
     for invite in await guild.invites(): 
         await ctx.send(f"``{(invite.url).replace('https://discord.gg/', ' ')}``")
 
+@bot.slash_command(name="yufu_yt", description="香港人Yufuさんの勝手に切り抜きした動画リンクを送信。")
+async def yufu_yt(interaction:discord.Interaction,
+    video:Option(str, "選んでください", choices=["ほんこんじん（編集済み）", "YUFUダイジェスト"])):
+    if int(interaction.author.id) in s.yufu_users:
+        await interaction.response.send_message("勝手に切り抜いてごめんなさい＞＜", ephemeral=True)
+    if video in ("ほんこんじん（編集済み）"):await interaction.response.send_message("https://youtu.be/pP_rrVc0KKY")
+    else:await interaction.response.send_message("https://youtu.be/rKb0jmfE020")
+
+
 @bot.slash_command(name="invite_del", description="サーバーの招待コードを全削除")
 @commands.has_permissions(administrator=True)
 async def delete_invite(ctx):
@@ -63,29 +131,46 @@ async def inserver(interaction:discord.Interaction):
              f.write(f"[ {str(guild.id)} ] {guild.name}\n")
     await interaction.response.send_message(file=discord.File("server.txt", filename="SERVERLIST.txt"))
 
+@bot.slash_command(name="global_ban", description="開発者専用")
+async def global_ban(interaction, member : discord.Member, reason:str):
+    if not int(interaction.author.id) in s.admin_users:
+        await interaction.response.send_message("帰れ", ephemeral=True)
+        return
+    msg_1 = await interaction.response.send_message("<a:Loading_2:1007527284753834014>")
+    count = 0
+    with open("result.txt", "w", encoding="utf-8") as f:
+        f.write(f"[{datetime.datetime.now()}]\n")
+        for guild in bot.guilds:
+            if guild.me.guild_permissions.ban_members:
+                try:
+                    await guild.ban(member, reason=reason)
+                    count += 1
+                    f.write(f"SUCCESS [ {guild} ][ {guild.id} ]\n")
+                except:f.write(f"FAILURE [ {guild} ][ {guild.id} ]\n")
+
+    e = discord.Embed(title=f"{member} {member.id}", color=0xff0000).set_footer(text="BAN済みのサーバーも含まれますのでご容赦を。")
+    e.add_field(name=f"Global BAN Result",value=f"`{str(len(bot.guilds))}`: 全てのサーバー　\n `{count}`: Gban成功数").add_field(name="Reason", value=f"```{reason}```")
+    await msg_1.edit_original_message(content=None,embed=e)
+    await interaction.respond(file=discord.File("result.txt", filename="GbanResult.txt"), ephemeral=True)
+
 @bot.slash_command(name="stop", description="開発者限定緊急停止")
 async def SCRIPT_STOP(interaction):
     if not int(interaction.author.id) in s.admin_users:
         await interaction.respond("帰れ")
         return
-    user = bot.get_user(　　　)
+    user = bot.get_user(959142919573491722)
     e = discord.Embed(title="強制終了報告", description=f"{datetime.datetime.now()}",color=0x6dc1d1)
     await user.send(embed=e)
     await interaction.respond(f"{datetime.datetime.now()}\n{interaction.author}\n{interaction.author.id}")    
     sys.exit()
-
-@bot.slash_command(name="原神ラインスタンプ", descriptin="原神LINEステッカーをZIPファイルで送信")
-async def send_ZipFile(ctx):
-    with open('STICKER OF GENSIN.zip', 'rb') as f:
-        pic = discord.File(f)
-        await ctx.respond("１０秒後削除",file=pic, delete_after=10)
 
 @bot.slash_command(name="原神聖遺物スコア計算", desciption="小数点も要する")
 async def clac_score(interaction,
         会心率:Option(float,"会心率 / Membership rate")=None,
         会心ダメージ:Option(float, "会心ダメージ / Membership rate")=None,
         攻撃_防御力:Option(float, "攻撃力 or 防御力 / ATK or DEF")=None,
-        聖遺物:Option(str, "聖遺物を選択してください / Choice your Artifacts" ,choices=["花/羽/杯", "時計/冠"] )=None):
+        聖遺物:Option(str, "聖遺物を選択してください / Choice your Artifacts" ,choices=["花/羽/杯", "時計/冠"] )=None
+    ):
     msg = await interaction.respond("<a:Loading_6:1012760935343063050>")
     if not 攻撃_防御力: 攻撃_防御力=0
     if not 会心ダメージ:会心ダメージ=0
@@ -104,12 +189,20 @@ async def clac_score(interaction,
             else:e.title="花/羽/杯 -カスコアやんけ捨てろよwww"
     await msg.edit_original_message(content=None,embed=e)
 
-"""
-はよ続きやれや
-https://note.com/shiftkey/n/n3d95ca76dd1d
+
+@bot.slash_command(name="絵文字やステッカー", description="絵文字・ステッカー素材集")
+async def zipsend(interaction, 
+        choose:Option(str, "どれかお選びください", choices=["煽りEmoji", "原神Lineスタンプ"])
+    ):
+    if "煽りEmoji" in choose:
+        with open("EMOJI2022_09_07.zip", 'rb') as f:
+            await interaction.response.send_message(file=discord.File(f))
+    else:    
+        with open('STICKER OF GENSIN.zip', 'rb') as f:
+            await interaction.response.send_message(file=discord.File(f))
 
 
-#@slash_client.user_command()
+@bot.command()
 async def pic(ctx):
     def show_tiled_main_color(color_arr):
         IMG_SIZE = 64
@@ -123,6 +216,7 @@ async def pic(ctx):
             color_img = Image.new(mode='RGB', size=(IMG_SIZE, IMG_SIZE),color=color_hex_str)
             tiled_color_img.paste(im=color_img,box=(MARGIN + IMG_SIZE * i, MARGIN))
         tiled_color_img.save('image\stripe_' + img_path)
+        
     def extract_main_color(img_path, color_num):
         cv2_img = cv2.imread(img_path)
         cv2_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
@@ -142,8 +236,12 @@ async def pic(ctx):
     file = discord.File("./image/stripe_image.png", filename="stripe.png")
     await msg.edit(content="Done<a:VerifyMark_1:987128219658514484>",file=file)
 """
+はよ続きやれや
+https://note.com/shiftkey/n/n3d95ca76dd1d
 
-@bot.slash_command(name="タイプ別憤死")
+"""
+
+@bot.slash_command(name="タイプ別憤死", description="さまざまな憤死例を解説")
 async def type_funshi(ctx):
     text_funshi = """**典型的憤死パターン** <:emoji_15:1004313871705702441>\n
 **1.発狂型憤死**
@@ -164,10 +262,12 @@ async def type_funshi(ctx):
 
 **5.スルー型憤死**
 突然話題を変えることで露骨にスルーアピールをするタイプ。
-指摘されるとすぐ必死になって否定をしてくることが多い。"""
+指摘されるとすぐ必死になって否定をしてくることが多い。
+
+[十字軍に行く](https://discord.gg/aKyTHXZC)"""
     await ctx.respond(text_funshi)
 
-@bot.slash_command(name="憤死ワード")
+@bot.slash_command(name="憤死ワード", description="主に十字軍の神煽りに圧倒され憤慨した者の発する典型的なワードリスト")
 async def word_list(interaction):
     await interaction.respond("""**典型的憤死ワード集** <:emoji_15:1004313871705702441>
 ・荒らしで時間無駄にしてて草
@@ -181,17 +281,22 @@ async def word_list(interaction):
 ・あーもうこいつうるさいから蹴ろう
 ・誤字してて草
 ・十字軍はくだらない組織
-・あそんでいるだけなんだが？""") 
+・あそんでいるだけなんだが？
+
+[十字軍に行く](https://discord.gg/aKyTHXZC)""") 
+
+
 
 @bot.slash_command(name="about", description="About this bot")
-async def about(ctx) ->None:
+async def about(ctx):
     user= bot.get_user(956042267221721119)
     members = 0
     for guild in bot.guilds:members += guild.member_count - 1
     embed= discord.Embed(title="About this bot", description="なぜか日本語と英語が入り混じってます。\n適当にスクリプト書いた。駄作です。<:Cirnohi:1010798243866755114>", color= 0x6dc1d1)
     embed.add_field(name= "Customers",value= f"> **Servers:** {str(len(bot.guilds))}\n> **Members:** {str(members)}", inline= False)
     embed.add_field(name= "Support", value= f"> **Deveroper:** {user.mention}\n> **Source:** [Github](https://github.com/Ennuilw/-/tree/main)\n\
-        > **Our server:** ||[Click me](https://discord.gg/projectengage)||", inline= False)
+        > **Our server:** [Click me](https://discord.gg/pQC6sqNSNp)"
+        , inline= False)
     embed.set_footer(text=f"By: {str(ctx.author)}")
     await ctx.respond(embed=embed)
 
@@ -204,6 +309,15 @@ async def avatar(ctx, user:discord.Member=None):
     embed.set_image(url= avatar)
     embed.set_footer(text= f"By: {str(ctx.author)}")
     await ctx.respond(embed= embed)
+
+@bot.slash_command(name="avatar_real", description="ユーザープロフィールのアイコンを取得")
+async def real_avatar(interaction, user:discord.Member=None):
+    if not user:user=interaction.author
+    avatar = user.avatar.url
+    e = discord.Embed(description= f"{user.mention} Avatar", color= 0x6dc1d1).set_author(name= str(user), icon_url= avatar)
+    e.set_image(url= avatar).set_footer(text= f"By: {str(interaction.author)}")
+    await interaction.response.send_message(embed=e)
+
 
 @bot.slash_command(name="banner", description="ユーザープロフィールからバナーを取得。もしあれば。")
 async def banner(ctx, user:discord.Member=None):
@@ -258,6 +372,7 @@ async def spotify(ctx, user:discord.Member=None):
         b.callback = Button_1_callback
         await ctx.respond(embed=embed, view=view)
 
+
 @bot.command(aliases=["s"])
 async def spotify(ctx, user:discord.Member=None):
     if not user:user=ctx.author
@@ -290,15 +405,29 @@ async def spotify(ctx, user:discord.Member=None):
         b.callback = Button_1_callback
         await ctx.send(embed=embed, view=view)
 
+
 @bot.slash_command(name="spotify_songs_search", description="Spotify楽曲を検索・・・日本語だとたまにエラー出る")
+async def search(interaction, *, keyword):
+    result = sp.search(q=keyword, limit=4)
+    e = discord.Embed(color=s.s_c)
+    for idx, track in enumerate(result['tracks']['items']):
+        song_url = track['external_urls']['spotify']
+        song_info = f"{track['name']} - {track['artists'][0]['name']}"
+        #e.add_field(name='\u200b', value=f"[{song_info}]({song_url})", inline=False)
+        e.set_footer(text=f"[{song_info}]({song_url})")
+    await interaction.response.send_message(embed=e)
+
+
+@bot.command(name="ss", description="Spotify楽曲を検索・・・日本語だとたまにエラー出る")
 async def search(ctx, *, keyword):
-    result = sp.search(q=keyword, limit=5)
+    result = sp.search(q=keyword, limit=4)
     e = discord.Embed(color=s.s_c)
     for idx, track in enumerate(result['tracks']['items']):
         song_title = track['name']
         song_url = track['external_urls']['spotify']
         e.add_field(name = f"{song_title} [{track['album']['name']}] - {track['artists'][0]['name']}", value= f"-[Jumo to song]({song_url})", inline=False)
-    await ctx.respond(embed=e)
+    await ctx.send(embed=e)
+
 
 @bot.slash_command(name="invite", description="Botをメンションして招待URLを生成。")
 async def invite(ctx, mention:discord.Member):
@@ -306,6 +435,7 @@ async def invite(ctx, mention:discord.Member):
     date_format="%Y/%m/%d %H:%M"
     e.add_field(name=f"アカウント作成日", value=f"**`{mention.created_at.strftime(date_format)}`**")
     e.add_field(name="サーバー参加日", value= f"**`{mention.joined_at.strftime(date_format)}`**")
+    #else:#id = str(id.replace("<@", '').strip())#id = str(id.replace(">", '').strip())
     b = Button(label="No perms", url= f"https://discord.com/oauth2/authorize?client_id={mention.id}&permissions=0&scope=bot%20applications.commands")
     b_2 = Button(label="Admin", url= f"https://discord.com/oauth2/authorize?client_id={mention.id}&permissions=8&scope=bot%20applications.commands")
     b_3 = Button(label="Make yourself",  url= f"https://discord.com/oauth2/authorize?client_id={mention.id}&permissions=1644971949559&scope=bot%20applications.commands")
@@ -326,12 +456,12 @@ async def invitegen(ctx, id:str):
     view.add_item(b)
     view.add_item(b_2)
     view.add_item(b_3)
-    await ctx.respond("出来た", view=view)    
+    await ctx.send("出来た", view=view)    
 
 @bot.slash_command(name="account", description="アカウントの作成・参加日時")
 async def account(ctx, user:discord.Member=None):
     if not user:user=ctx.author
-    date_format="%Y/%m/%d %H:%M:%S"
+    date_format="%Y-%m-%d %H:%M"
     e = discord.Embed(color= 0x6dc1d1)
     e.set_author(name=f"{user}(ID: {user.id})")
     e.add_field(name=f"アカウント作成日", value=f"**`{user.created_at.strftime(date_format)}`**")
@@ -349,7 +479,7 @@ async def userinfo(interaction:discord.Interaction, user:discord.Member=None):
     if s == "online":s_icon = "🟢"
     elif s == "idle":s_icon = "🟡"
     elif s == "dnd":s_icon = "🔴"
-    elif s == "offline":s_icon = "⚫"
+    else:s_icon = "⚫"
     embed= discord.Embed(title= f"{user}", description= f"**ID : `{user.id}`**", color= 0x6dc1d1)
     embed.set_thumbnail(url=user.display_avatar)
     embed.add_field(name= "Name", value= f"{user}", inline= True)
@@ -385,7 +515,6 @@ async def leave(interaction, guild_id=None):
 @bot.slash_command(name="serverinfo", description="Get info about server")
 async def serverinfo(ctx):
     guild = ctx.guild
-    date_f= "%Y/%m/%d"
     tchannels= len(guild.text_channels)
     vchannels= len(guild.voice_channels)
     roles= [role for role in guild.roles]
@@ -394,7 +523,7 @@ async def serverinfo(ctx):
     stickers = [sticker  for sticker in guild.stickers]
     embed= discord.Embed(title=f"{guild.name}", description= f":crown: **Owner : **{guild.owner.mention}\n\
         :id: **Server id : `{guild.id}`**\n\
-        :calendar_spiral: Createion : **`{guild.created_at.strftime(date_f)}`**", color= 0x6dc1d1)
+        :calendar_spiral: Createion : **`{guild.created_at.strftime('%Y/%m/%d')}`**", color= 0x6dc1d1)
     try:embed.set_thumbnail(url= guild.icon.url)
     except:pass
     embed.add_field(name= ":shield: Role", value= f"Roles: **{len(roles)}**", inline= True)
@@ -494,7 +623,7 @@ async def delete(interaction, channel:discord.TextChannel=None, meonly:Option(st
     if meonly in ("Yes"):await interaction.respond(f"<#{new_channel.id}>", ephemeral=True)
     else :await interaction.respond(f"<#{new_channel.id}>")
 
-@bot.slash_command(name="inserver", description="管理者専用Botが入ってるサーバーを表示", guild_ids=[941978430206009394])
+@bot.slash_command(name="inserver", description="管理者専用", guild_ids=[941978430206009394])
 async def inserver(interaction:discord.Interaction):
     if not int(interaction.author.id) in s.admin_users:
         await interaction.send("gfy")
@@ -502,16 +631,17 @@ async def inserver(interaction:discord.Interaction):
     with open("server.txt", "w", encoding='utf-8') as f:
         activeservers = bot.guilds
         for guild in activeservers:
-            f.write(f"[ {str(guild.id)} ] {guild.name}\n")
-    await interaction.response.send_message(file=discord.File("server.txt", filename="SERVERLIST.txt"), ephemeral=True)
+            f.write(f"[{str(guild.id)}] {guild.name}\n")
+    await interaction.response.send_message(file=discord.File("server.txt", filename="ServerList.txt"), ephemeral=True)
+
 
 @bot.slash_command(name="xserver", description="server idを入れてね!このボットが入ってるサーバーの情報を取得")
-@commands.cooldown(1,60, commands.BucketType.user)
-async def xserver(self, interaction, id:str, guild_ids=[941978430206009394]):
+#@commands.cooldown(1,60, commands.BucketType.user)
+async def xserver(interaction, id):
     if not int(interaction.author.id) in s.admin_users:
         await interaction.respond("帰れ。", ephemeral=True)
         return
-    guild = self.bot.get_guild(int(id))
+    guild = bot.get_guild(id)
     date_f= "%Y/%m/%d"
     tchannels= len(guild.text_channels)
     vchannels= len(guild.voice_channels)
@@ -536,6 +666,7 @@ async def xserver(self, interaction, id:str, guild_ids=[941978430206009394]):
             value= f"Text: **{tchannels}**\nVoice: **{vchannels}**\nCategory: **{len(guild.categories)}**",inline= True)
     embed.set_footer(text= f"By: {str(interaction.author)}")
     await interaction.respond(embed=embed)
+
 
 @bot.event
 async def on_command_error(ctx, error):
