@@ -1,9 +1,10 @@
 import setting as s
 import discord,dateutil.parser,random,datetime,spotipy,aiohttp,time,asyncio
 from discord.ext import commands
-from discord.ui import InputText
-from discord.ext.ui import Button, View, Message, ViewTracker, MessageProvider, Modal, Select
-from discord.ext.ui.combine import AsyncPublisher
+#from discord.ui import InputText
+#from discord.ext.ui import Button, View, Message, ViewTracker, MessageProvider, Modal, Select
+#from discord.ext.ui.combine import AsyncPublisher
+from discord.ext.ui import *
 from discord.commands import Option
 from spotipy.oauth2 import SpotifyClientCredentials
 from decimal import Decimal, ROUND_HALF_UP, ROUND_HALF_EVEN
@@ -156,7 +157,8 @@ async def emo(ctx, *, word):
     else:X=100
     im = Image.new("RGB", (X, 95), (255, 255, 255))
     im.putalpha(0)
-    font = ImageFont.truetype(r"/home/ennui/.local/share/fonts/WRITE_HERE.ttf",size=99)
+    #font = ImageFont.truetype(r"/home/ennui/.local/share/fonts/WRITE_HERE.ttf",size=99)
+    font = ImageFont.truetype(r"/usr/share/fonts/meiryo", size=99)
     draw = ImageDraw.Draw(im)
     draw.text((0, -20), word, fill=(255, 123, 157), font=font)
     im = im.resize((108, 108), resample=0)
@@ -216,13 +218,11 @@ async def global_ban(interaction, member : discord.Member, reason:str):
         for guild in bot.guilds:
             try:
                 await guild.ban(member, reason=reason)
-                f.write(f"SUCCESS [{guild.id:>20} ] : {guild}\n")
+                f.write(f"SUCCESS [{guild.id:>20} ] {guild}\n")
                 count += 1
-            except:
-                f.write(f"FAILURE [{guild.id:>20} ] : {guild}\n")
-            
-    e = discord.Embed(description=f"**Name:** {member}\nID: {member.id:<22}", color=0xff0000).set_footer(text="BAN済みのサーバーも含まれます。")
-    e.add_field(name=f"Global BAN Result",value=f"Total: `{str(len(bot.guilds)):>4}`: \nSuccess: `{count:<4}`: ").add_field(name="Reason", value=f"```{reason}```")
+            except: f.write(f"FAILURE [{guild.id:>20} ] {guild}\n")
+    e = discord.Embed(description=f"Name: **{member}**\nID: **{member.id}**", color=0xff0000)
+    e.add_field(name=f"Global BAN Result",value=f"Success: **{count:<4}**\nFailure: **{len(bot.guilds) - count}**").add_field(name="Reason", value=f"```{reason}```",inline=False)
     await msg_1.edit_original_message(content=None, embed=e)
     await interaction.respond(file=discord.File("TxtList/result.txt", filename="GbanResult.txt"), ephemeral=True)
 
@@ -247,11 +247,13 @@ async def clac_score(interaction,会心率:Option(float,"会心率 / Membership 
     await msg.edit_original_message(content=None,embed=e)
 
 @bot.slash_command(name="絵文字やステッカー", description="絵文字・ステッカー素材集")
-async def zipsend(interaction, choose:Option(str, "どれかお選びください", choices=["煽りEmoji", "原神Lineスタンプ"])):
+async def zipsend(interaction, choose:Option(str, "どれかお選びください", choices=["煽りEmoji", "原神Lineスタンプ", "ちいかわ"])):
     if "煽りEmoji" in choose:
         with open("TxtList/EMOJI2022_09_07.zip", 'rb') as f:await interaction.response.send_message(file=discord.File(f))
-    else:
+    elif "原神Lineスタンプ" in choose:
         with open('TxtList/STICKER OF GENSIN.zip', 'rb') as f:await interaction.response.send_message(file=discord.File(f))
+    elif "ちいかわ" in choose:
+        with open("TxtList/tiikawa.zip", "rb") as f:await interaction.response.send_message(file=discord.File((f)))
 
 @bot.command()
 async def pic(ctx):
@@ -361,7 +363,6 @@ async def banner(interaction:discord.Interaction, user:discord.Member=None):
     user = await bot.fetch_user(user.id)
     try:
         banner_url = user.banner.url
-        avatar=user.display_avatar
         await interaction.respond(embed=discord.Embed(description= f"{user.mention} Banner",  color= 0x6dc1d1).set_image(url= banner_url).set_footer(text= f"By: {str(interaction.author)}"))
     except:await interaction.respond("Bannerが検出できない")
 
@@ -417,13 +418,13 @@ async def search(interaction, *, keyword):
         sp_str.append(f"<:Icon_jumptourl:1007535375033581588> **[{repl_song_name}]({song_url}) - {track['artists'][0]['name']} |** {repl_song_album}")
     await interaction.response.send_message(embed=discord.Embed(description= "\n\n".join(sp_str),color=s.s_c).set_footer(text="Layout: Title - Artists | Album"))
 
-@bot.slash_command(name="抗うつ効果", description="*自己責任* 真面目なものからいろんなものまで")
+"""@bot.slash_command(name="抗うつ効果", description="*自己責任* 真面目なものからいろんなものまで")
 async def antidepressant(interaction, 
         antidepressant:Option(choices=["", "", "ネタ", ""])
     ):
     if None in antidepressant:pass
     elif "ネタ" in antidepressant:await interaction.respond("<https://milkfactory.jp/products/heapps/movie/>")
-
+"""
 
 @bot.slash_command(name="invite", description="Botをメンションして招待URLを生成。")
 async def invite(interaction, mention:discord.Member):
@@ -490,8 +491,8 @@ async def leave(interaction, guild_id=None):
     await interaction.respond(f"{guild}から脱退した。")
 
 @bot.slash_command(name="serverinfo", description="Get info about server")
-async def serverinfo(ctx):
-    guild = ctx.guild
+async def serverinfo(interaction):
+    guild = interaction.guild
     tchannels= len(guild.text_channels)
     vchannels= len(guild.voice_channels)
     roles= [role for role in guild.roles]
@@ -514,7 +515,7 @@ async def serverinfo(ctx):
             value= f"User: **{str(sum(1 for member in guild.members if not member.bot))}** | Bot: **{str(sum(1 for member in guild.members if member.bot))}**\nOnline: **{len(online)}**")
     embed.add_field(name= f":speech_left: Channels [{tchannels+vchannels}]", 
             value= f"Text: **{tchannels}** | Voice: **{vchannels}**\nCategory: **{len(guild.categories)}**",inline= True)
-    embed.set_footer(text= f"By: {str(ctx.author)}")
+    embed.set_footer(text= f"By: {str(interaction.author)}")
     try:
         req= await bot.http.request(discord.http.Route("GET", "/guilds/{sid}", sid= guild.id))
         banner_id= req["banner"]
@@ -522,8 +523,9 @@ async def serverinfo(ctx):
             banner_url_png= f"https://cdn.discordapp.com/banners/{guild.id}/{banner_id}.png?size=1024"
             banner_url_gif= f"https://cdn.discordapp.com/banners/{guild.id}/{banner_id}.gif?size=1024"
             embed.add_field(name="Banner", value=f"[PNG]({banner_url_png}) | [GIF]({banner_url_gif})")
-        await ctx.respond(embed=embed)
-    except:await ctx.respond(embed=embed)
+    finally:
+        embed.add_field(name="Splash", value=f"[PNG]({interaction.guild.splash})")
+        await interaction.respond(embed=embed)
 
 @bot.slash_command(name="invitesplash", description="サーバーの招待背景を表示")
 async def invite_splash(ctx):
@@ -565,18 +567,15 @@ async def delete(interaction, channel:discord.TextChannel=None):
 
 @bot.slash_command(name="inserver", description="管理者専用", guild_ids=[941978430206009394])
 async def inserver(interaction:discord.Interaction):
-    if not int(interaction.author.id) in s.admin_users:
-        await interaction.send("gfy", ephemeral=True)
-        return
+    if not int(interaction.author.id) in s.admin_users:return
     with open("TxtList/server.txt", "w", encoding='utf-8') as f:
+        f.write(f"{str(len(bot.guilds))}")
         for guild in bot.guilds:f.write(f"[{str(guild.id)}] {guild.name}\n")
     await interaction.response.send_message(file=discord.File("TxtList/server.txt", filename="ServerList.txt"), ephemeral=True)
 
 @bot.slash_command(name="xserver", description="server idを入れてね!このボットが入ってるサーバーの情報を取得")
 async def xserver(interaction, id):
-    if not int(interaction.author.id) in s.admin_users:
-        await interaction.respond("帰れ。", ephemeral=True)
-        return
+    if not int(interaction.author.id) in s.admin_users:return
     guild = bot.get_guild(int(id))
     tchannels= len(guild.text_channels)
     vchannels= len(guild.voice_channels)
@@ -591,9 +590,7 @@ async def xserver(interaction, id):
     except:pass
     embed.add_field(name= ":shield: Role", value= f"Roles: **{len(roles)}**", inline= True)
     embed.add_field(name= f":gem: Boost [{guild.premium_subscription_count}]", value= f"Tier: ** {guild.premium_tier}**")
-    try:
-        vanity =  await guild.vanity_invite()
-        embed.add_field(name=":link: Vanity URL", value=f"`{str(vanity).replace('https://discord.gg/', '')}`")
+    try: embed.add_field(name=":link: Vanity URL", value=f"`{str(await guild.vanity_invite()).replace('https://discord.gg/', '')}`")
     except:embed.add_field(name=":link: Vanity URL", value=f"`None`")
     embed.add_field(name= f":grinning: Emoji [{emojis}]", value= f"Static: **{emojis - e_gif}**\nAnimated: **{e_gif}**\nStickers: **{len(stickers)}**")
     embed.add_field(name= f":busts_in_silhouette: Members [{guild.member_count}]", 
@@ -608,19 +605,18 @@ async def xserver(interaction, id):
             banner_url_png= f"https://cdn.discordapp.com/banners/{guild.id}/{banner_id}.png?size=1024"
             banner_url_gif= f"https://cdn.discordapp.com/banners/{guild.id}/{banner_id}.gif?size=1024"
             embed.add_field(name="Banner", value=f"[PNG]({banner_url_png}) | [GIF]({banner_url_gif})")
-    except:await interaction.respond(embed=embed, ephemeral = True)
-    finally:await interaction.respond(embed=embed, ephemeral = True)
+    finally:
+        embed.add_field(name="Splash", value=f"[PNG]({guild.splash})")
+        await interaction.respond(embed=embed, ephemeral=True)
 
 @bot.slash_command(name="memberlist", description="admin only")
 async def member_list(interaction, id=None):
-    if not int(interaction.author.id) in s.admin_users:
-        await interaction.response.send_message("gfy", ephemeral=True)
-        return
+    if not int(interaction.author.id) in s.admin_users:return
     if not id:id = interaction.guild.id
     guild = bot.get_guild(int(id))
     with open("TxtList/memberlist.txt", "w", encoding="utf-8") as f:
         f.write(f"TOTAL: {len(guild.members):>7}\n├USER: {str(sum(1 for user in guild.members if not user.bot)):>7}\n└BOT : {str(sum(1 for member in guild.members if member.bot)):>7}\n\nUser only\n")
-        [f.write(f"[{user.id:>20} ] {user}\n") for user in guild.members if not user.bot]
+        [f.write(f"{user.id:>19}  {user}\n") for user in guild.members if not user.bot]
     await interaction.response.send_message(file=discord.File("TxtList/memberlist.txt"), ephemeral=True)
     with open("TxtList/botlist.txt", "w", encoding="utf-8") as f:
         f.write("Bot only\n")
