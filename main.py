@@ -2,7 +2,6 @@ import setting as s
 import discord,dateutil.parser,random,datetime,spotipy,aiohttp,time,asyncio
 from discord.ext import commands
 #from discord.ui import InputText
-#from discord.ext.ui import Button, View, Message, ViewTracker, MessageProvider, Modal, Select
 #from discord.ext.ui.combine import AsyncPublisher
 from discord.ext.ui import *
 from discord.commands import Option
@@ -19,7 +18,7 @@ import requests,cv2,io
 
 class MyBot(commands.Bot):
     def __init__(self):
-        super().__init__(command_prefix="a.", intents=discord.Intents.all())
+        super().__init__(command_prefix=",,", intents=discord.Intents.all())
         
 class SPB(discord.ui.View):
     def __init__(self, spotify):
@@ -31,7 +30,7 @@ class SPB(discord.ui.View):
         button.disabled=True
         await interaction.response.edit_message(view=self)
         await interaction.followup.send(f"https://open.spotify.com/track/{self.sp.track_id}")
-
+        
 
 bot = MyBot()
 img_path = 'image.png'
@@ -101,15 +100,18 @@ async def embed(interaction,
     else:e.description=description
     if not url:pass
     else: e.url=url
-    if name_1 and value_1:pass
+    if not name_1 and not value_1:pass
     else:e.add_field(name=name_1,value=value_1)
-    if name_2 and value_2:pass
+    if not name_2 and not value_2:pass
     else:e.add_field(name=name_2,value=value_2)
     if not thumbnail:pass
     else:e.set_thumbnail(url=thumbnail)
     if not image:pass
     else:e.set_image(url=image)
-    if not channel:await interaction.response.send_message(embed=e)
+    if not channel:
+        channel = interaction.channel
+        await interaction.response.send_message("done", ephemeral=True)
+        await channel.send(embed=e)
     else:
         channel = discord.utils.get(interaction.guild.channels, name=channel.name)
         msg = await channel.send(embed=e)
@@ -118,7 +120,7 @@ async def embed(interaction,
 
 @bot.command(aliases=["sc"])
 async def spell_check(ctx):
-    var = random.randint(1, 5)
+    var = random.randint(1, 8)
     b_e1 = discord.Embed(color = 0x6cd1c1)
     match (var):
         case 1:
@@ -137,8 +139,16 @@ async def spell_check(ctx):
             b_e1 = discord.Embed(title="CPUの英単語")
             answer = "central processing unit"
         case 6:
-            b_e1 = discord.Embed(title="")
+            b_e1 = discord.Embed(title="宣言子の英単語")
+            answer = "declarator"
+        case 7:
+            b_e1 = discord.Embed(title="演算子の英単語")
+            answer = "operator"
+        case 8:
+            b_e1 = discord.Embed(title="の英単語")
             answer = ""
+
+
     await ctx.reply(embed=b_e1)
     s_time = time.perf_counter()
     try:message = await bot.wait_for("message", timeout=15.0, check = lambda m:m.author and m.channel == ctx.channel)
@@ -165,6 +175,40 @@ async def emo(ctx, *, word):
     im.save("emoji.png")
     await ctx.reply(file=discord.File("emoji.png"), mention_author=False)
 
+"""
+フォント選べるやつ。サイズ調整ダルいから多分しない。
+@bot.slash_command(name="emojigen(仮)", description="emoji wo tukuru.")
+async def emo(interaction, font:Option(str, choices=["test", "装甲明朝", "メイリオ"], description="emoji no font"), *, word):
+    match (font):
+        case "ラノベ":
+            font=r"/usr/share/fonts/truetype/malayalam"
+        case "装甲明朝":
+            font=r""
+        case "メイリオ":
+            font=r"/usr/share/fonts/meiryo/meiryo"
+        
+    if (4 <= len(word)):X = 400
+    elif (3 == len(word)):X = 300
+    elif (2 == len(word)):X = 200
+    else:X=100
+
+    im = Image.new("RGB", (X, 95), (255, 255, 255))
+    im.putalpha(0)
+    #font = ImageFont.truetype(r"/home/ennui/.local/share/fonts/WRITE_HERE.ttf",size=99)
+    font = ImageFont.truetype(font, size=99)
+    draw = ImageDraw.Draw(im)
+    draw.text((0, -20), word, fill=(255, 123, 157), font=font)
+    im = im.resize((108, 108), resample=0)
+    im.save("TxtList/emoji.png")
+    await interaction.respond(file=discord.File("TxtList/emoji.png"))
+"""
+
+@bot.slash_command(name="嫌いな人リスト", description="個人的にに苦手・嫌い・ネタ抜きで死んでほしい人リスト")
+async def hate(interaction):
+    if not interaction.author.id in s.verifyed_users:return
+    await interaction.respond(file=discord.File("TxtList/hate.txt"), ephemeral=True)
+
+
 @bot.command()
 async def roles(ctx):
     with open("TxtList/rolelist.txt", "w", encoding="utf-8") as f:
@@ -186,14 +230,6 @@ async def invites(interactioin, id =None):
         await interactioin.respond(f"VANITY: {str(vanity).replace('https://discord.gg/', ' ')}")
     except:pass
     [await interactioin.respond(f"``{(invite.url).replace('https://discord.gg/', ' ')}``") for invite in await guild.invites()]
-
-@bot.slash_command(name="yufu_yt", description="香港人Yufuさんの勝手に切り抜きした動画リンクを送信。")
-async def yufu_yt(interaction:discord.Interaction,
-    video:Option(str, "選んでください", choices=["ほんこんじん（編集済み）", "YUFUダイジェスト"])):
-    if int(interaction.author.id) in s.yufu_users:
-        await interaction.response.send_message("勝手に切り抜いてごめんなさい＞＜", ephemeral=True)
-    if video in ("ほんこんじん（編集済み）"):await interaction.response.send_message("https://youtu.be/pP_rrVc0KKY")
-    else:await interaction.response.send_message("https://youtu.be/rKb0jmfE020")
 
 @bot.slash_command(name="botinserver", description="管理者専用")
 async def inserver(interaction:discord.Interaction):
@@ -333,7 +369,7 @@ async def word_list(interaction):
 
 @bot.slash_command(name="about", description="About this bot")
 async def about(interaction):
-    user= bot.get_user(956042267221721119)
+    user= bot.get_user(901518724098568223)
     members = 0
     for guild in bot.guilds:members += guild.member_count - 1
     embed= discord.Embed(title="About this bot", description="なぜか日本語と英語が入り混じってます。\n適当にスクリプト書いた。駄作です。<:Cirnohi:1010798243866755114>", color= 0x6dc1d1)
@@ -347,7 +383,8 @@ async def about(interaction):
 async def avatar(ctx, user:discord.Member=None):
     if not user: user= ctx.author
     avatar= user.display_avatar
-    embed= discord.Embed(description= f"{user.mention} Avatar",  color= 0x6dc1d1).set_image(url= avatar).set_footer(text= f"By: {str(ctx.author)}")
+    url = avatar.url
+    embed= discord.Embed(description= f"> {user.mention} Avatar\n> **[URL]({url})**",color= 0x6dc1d1).set_image(url= avatar).set_footer(text= f"By: {str(ctx.author)}")
     await ctx.respond(embed= embed)
 
 @bot.slash_command(name="avatar_real", description="ユーザープロフィールのアイコンを取得")
